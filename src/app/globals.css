@@ -24,3 +24,9 @@ body {
   background: #b58269;
   border-radius: 3px;
 }
+
+/* Disable browser native password reveal icon (Edge / Chrome) to avoid double eye icons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

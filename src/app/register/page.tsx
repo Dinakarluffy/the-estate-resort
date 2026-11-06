@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Coffee, UserPlus, AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Coffee, UserPlus, AlertCircle, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +23,7 @@ export default function RegisterPage() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match. Please re-enter.");
       return;
     }
 
@@ -41,7 +43,7 @@ export default function RegisterPage() {
         return;
       }
 
-      // Successful registration & auto-login
+      // Successful registration & auto-login -> redirect home
       router.push("/");
       router.refresh();
     } catch (err: any) {
@@ -68,7 +70,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-700">
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-700 animate-in fade-in duration-200">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -121,29 +123,50 @@ export default function RegisterPage() {
               <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1">
                 Password *
               </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="6+ chars"
-                className="w-full px-3 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#546a4a] text-sm"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="6+ chars"
+                  className="w-full pl-3 pr-8 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#546a4a] text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-2.5 text-stone-400 hover:text-stone-700 transition"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
+
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1">
                 Confirm *
               </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat"
-                className="w-full px-3 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#546a4a] text-sm"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat"
+                  className="w-full pl-3 pr-8 py-2.5 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-[#546a4a] text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-2 top-2.5 text-stone-400 hover:text-stone-700 transition"
+                  title={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
