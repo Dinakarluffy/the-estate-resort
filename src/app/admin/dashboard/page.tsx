@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { verifySessionToken } from "@/lib/auth";
 import { PrismaClient } from "@prisma/client";
-import { ShieldCheck, AlertTriangle, CheckCircle2, Sliders } from "lucide-react";
+import { ShieldCheck, AlertTriangle, CheckCircle2, Sliders, Users } from "lucide-react";
 import { SignOutButton } from "@/components/SignOutButton";
+import { UserManager } from "@/components/admin/UserManager";
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,8 @@ export default async function AdminDashboardPage() {
   const gmReviewCount = await prisma.enquiry.count({
     where: { requiresGmReview: true },
   });
+
+  const totalUsers = await prisma.user.count();
 
   return (
     <div className="min-h-screen bg-[#fbf8f5] p-6">
@@ -57,11 +60,11 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* GM Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                Unsorted / Complaints Requiring GM Review
+                Unsorted / Complaints Requiring GM
               </span>
               <AlertTriangle className="w-4 h-4 text-amber-600" />
             </div>
@@ -87,7 +90,25 @@ export default async function AdminDashboardPage() {
               Allotment controls prevent overbooking agency inventory
             </p>
           </div>
+
+          <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                Total Registered Accounts
+              </span>
+              <Users className="w-4 h-4 text-emerald-700" />
+            </div>
+            <div className="text-3xl font-serif font-bold text-stone-900 mt-2">
+              {totalUsers} Users
+            </div>
+            <p className="text-xs text-stone-500 mt-1">
+              Live database records (Guests, Staff, GM)
+            </p>
+          </div>
         </div>
+
+        {/* Live Staff & User Role Management Table */}
+        <UserManager currentAdminId={user?.userId || ""} />
       </div>
     </div>
   );

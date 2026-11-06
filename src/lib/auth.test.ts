@@ -9,6 +9,9 @@ import {
   canAccessGmRoutes,
   authenticateUser,
   registerUser,
+  getAllUsers,
+  updateUserRole,
+  deleteUser,
   UserSession,
 } from "./auth";
 
@@ -159,6 +162,64 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
       const decoded = await verifySessionToken(res.token!);
       expect(decoded?.email).toBe("aditi@test.com");
       expect(decoded?.role).toBe("GUEST");
+    });
+  });
+
+  describe("Admin User Management (getAllUsers, updateUserRole, deleteUser)", () => {
+    it("lists all users safely", async () => {
+      const mockPrisma = {
+        user: {
+          findMany: async () => [
+            { id: "1", name: "Guest", email: "g@test.com", role: "GUEST" },
+            { id: "2", name: "Staff", email: "s@test.com", role: "STAFF" },
+          ],
+        },
+      } as any;
+
+      const users = await getAllUsers(mockPrisma);
+      expect(users.length).toBe(2);
+      expect(users[0].role).toBe("GUEST");
+    });
+
+    it("promotes a GUEST to STAFF successfully", async () => {
+      const mockPrisma = {
+        user: {
+          findUnique: async () => ({ id: "guest_1", role: "GUEST" }),
+          update: async ({ data }: any) => ({ id: "guest_1", role: data.role }),
+        },
+      } as any;
+
+      const res = await updateUserRole("admin_gm", "guest_1", "STAFF", mockPrisma);
+      expect(res.success).toBe(true);
+      expect(res.user?.role).toBe("STAFF");
+    });
+
+    it("prevents an admin from demoting their own GM account", async () => {
+      const res = await updateUserRole("admin_gm", "admin_gm", "GUEST");
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("cannot demote your own account");
+    });
+
+    it("prevents an admin from deleting their own account", async () => {
+      const res = await deleteUser("admin_gm", "admin_gm");
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("cannot delete your own account");
+    });
+
+    it("deletes a user successfully", async () => {
+      let deletedId = "";
+      const mockPrisma = {
+        user: {
+          findUnique: async () => ({ id: "target_user" }),
+          delete: async ({ where }: any) => {
+            deletedId = where.id;
+          },
+        },
+      } as any;
+
+      const res = await deleteUser("admin_gm", "target_user", mockPrisma);
+      expect(res.success).toBe(true);
+      expect(deletedId).toBe("target_user");
     });
   });
 

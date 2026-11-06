@@ -155,3 +155,93 @@ export async function authenticateUser(
     token,
   };
 }
+
+/**
+ * Lists all registered users for GM administration (passwords excluded)
+ */
+export async function getAllUsers(dbClient: PrismaClient = prisma) {
+  return dbClient.user.findMany({
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      phone: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+/**
+ * Updates a user's role (Promote / Demote)
+ * Safety guard: An admin cannot demote themselves from GM
+ */
+export async function updateUserRole(
+  adminUserId: string,
+  targetUserId: string,
+  newRole: Role,
+  dbClient: PrismaClient = prisma
+): Promise<{ success: boolean; user?: any; error?: string }> {
+  const validRoles: Role[] = ["GUEST", "STAFF", "GM"];
+  if (!validRoles.includes(newRole)) {
+    return { success: false, error: "Invalid role specified" };
+  }
+
+  if (adminUserId === targetUserId && newRole !== "GM") {
+    return { success: false, error: "Security restriction: You cannot demote your own account from General Manager" };
+  }
+
+  const targetUser = await dbClient.user.findUnique({
+    where: { id: targetUserId },
+  });
+
+  if (!targetUser) {
+    return { success: false, error: "User not found" };
+  }
+
+  const updated = await dbClient.user.update({
+    where: { id: targetUserId },
+    data: { role: newRole },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      phone: true,
+      createdAt: true,
+    },
+  });
+
+  return { success: true, user: updated };
+}
+
+/**
+ * Deletes a user account
+ * Safety guard: An admin cannot delete their own account
+ */
+export async function deleteUser(
+  adminUserId: string,
+  targetUserId: string,
+  dbClient: PrismaClient = prisma
+): Promise<{ success: boolean; error?: string }> {
+  if (adminUserId === targetUserId) {
+    return { success: false, error: "Security restriction: You cannot delete your own account" };
+  }
+
+  const targetUser = await dbClient.user.findUnique({
+    where: { id: targetUserId },
+  });
+
+  if (!targetUser) {
+    return { success: false, error: "User not found" };
+  }
+
+  await dbClient.user.delete({
+    where: { id: targetUserId },
+  });
+
+  return { success: true };
+}
