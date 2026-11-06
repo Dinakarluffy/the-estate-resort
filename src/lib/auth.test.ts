@@ -165,7 +165,7 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
     });
   });
 
-  describe("Admin User Management (getAllUsers, updateUserRole, deleteUser)", () => {
+  describe("Admin User Management & Peer GM Security Guardrails", () => {
     it("lists all users safely", async () => {
       const mockPrisma = {
         user: {
@@ -194,6 +194,43 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
       expect(res.user?.role).toBe("STAFF");
     });
 
+    it("allows a GM to promote a STAFF member to GM", async () => {
+      const mockPrisma = {
+        user: {
+          findUnique: async () => ({ id: "staff_1", role: "STAFF" }),
+          update: async ({ data }: any) => ({ id: "staff_1", role: data.role }),
+        },
+      } as any;
+
+      const res = await updateUserRole("admin_gm", "staff_1", "GM", mockPrisma);
+      expect(res.success).toBe(true);
+      expect(res.user?.role).toBe("GM");
+    });
+
+    it("strictly blocks a GM from demoting another GM (Peer Protection)", async () => {
+      const mockPrisma = {
+        user: {
+          findUnique: async () => ({ id: "fellow_gm", role: "GM" }),
+        },
+      } as any;
+
+      const res = await updateUserRole("admin_gm_1", "fellow_gm", "STAFF", mockPrisma);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("cannot demote another General Manager");
+    });
+
+    it("strictly blocks a GM from deleting another GM (Peer Protection)", async () => {
+      const mockPrisma = {
+        user: {
+          findUnique: async () => ({ id: "fellow_gm", role: "GM" }),
+        },
+      } as any;
+
+      const res = await deleteUser("admin_gm_1", "fellow_gm", mockPrisma);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("cannot delete another General Manager");
+    });
+
     it("prevents an admin from demoting their own GM account", async () => {
       const res = await updateUserRole("admin_gm", "admin_gm", "GUEST");
       expect(res.success).toBe(false);
@@ -206,20 +243,20 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
       expect(res.error).toContain("cannot delete your own account");
     });
 
-    it("deletes a user successfully", async () => {
+    it("deletes a non-GM user successfully", async () => {
       let deletedId = "";
       const mockPrisma = {
         user: {
-          findUnique: async () => ({ id: "target_user" }),
+          findUnique: async () => ({ id: "target_guest", role: "GUEST" }),
           delete: async ({ where }: any) => {
             deletedId = where.id;
           },
         },
       } as any;
 
-      const res = await deleteUser("admin_gm", "target_user", mockPrisma);
+      const res = await deleteUser("admin_gm", "target_guest", mockPrisma);
       expect(res.success).toBe(true);
-      expect(deletedId).toBe("target_user");
+      expect(deletedId).toBe("target_guest");
     });
   });
 

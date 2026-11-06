@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, ShieldCheck, Coffee, Trash2, ArrowUpDown, Search, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { User, ShieldCheck, Coffee, Trash2, Search, AlertCircle, CheckCircle2, Loader2, Lock } from "lucide-react";
 
 interface UserRecord {
   id: string;
@@ -115,7 +115,7 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
             <span>Staff & User Role Administration</span>
           </h2>
           <p className="text-xs text-stone-500 mt-1">
-            General Manager control: View all accounts, promote guests to staff, or manage permissions
+            General Manager control: View all accounts, promote guests to staff, or delegate GM permissions
           </p>
         </div>
 
@@ -130,6 +130,14 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
             className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#546a4a]"
           />
         </div>
+      </div>
+
+      {/* Peer Protection Banner */}
+      <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+        <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+        <span>
+          <strong>Executive Peer Protection:</strong> You can promote staff members to General Manager. However, once an account is a General Manager, it is protected from being demoted or deleted by fellow GMs (requires Resort Owner authorization).
+        </span>
       </div>
 
       {message && (
@@ -172,6 +180,7 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
             <tbody className="divide-y divide-stone-100">
               {filteredUsers.map((u) => {
                 const isCurrentAdmin = u.id === currentAdminId;
+                const isFellowGm = u.role === "GM" && !isCurrentAdmin;
                 const isUpdating = updatingId === u.id;
                 const isDeleting = deletingId === u.id;
 
@@ -180,11 +189,15 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
                     <td className="py-3 px-3">
                       <div className="font-semibold text-stone-900 flex items-center gap-1.5">
                         <span>{u.name}</span>
-                        {isCurrentAdmin && (
+                        {isCurrentAdmin ? (
                           <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
-                            You (GM)
+                            You (Active GM)
                           </span>
-                        )}
+                        ) : isFellowGm ? (
+                          <span className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" /> Peer GM
+                          </span>
+                        ) : null}
                       </div>
                       <div className="text-[11px] text-stone-400 font-mono mt-0.5">
                         {u.email}
@@ -222,7 +235,11 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
                     <td className="py-3 px-3 text-right">
                       {isCurrentAdmin ? (
                         <span className="text-[11px] text-stone-400 italic">
-                          Protected (Active Session)
+                          Protected (Your Account)
+                        </span>
+                      ) : isFellowGm ? (
+                        <span className="text-[11px] text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200 inline-flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-amber-600" /> Protected (Peer GM)
                         </span>
                       ) : (
                         <div className="inline-flex items-center gap-2">
@@ -254,10 +271,10 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
                             <button
                               type="button"
                               disabled={isUpdating || isDeleting}
-                              onClick={() => handleRoleChange(u.id, "GUEST")}
-                              className="px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 rounded text-[11px] font-semibold transition disabled:opacity-50"
+                              onClick={() => handleRoleChange(u.id, "GM")}
+                              className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded text-[11px] font-semibold transition disabled:opacity-50"
                             >
-                              Demote to Guest
+                              Promote to GM
                             </button>
                           ) : null}
 

@@ -177,7 +177,9 @@ export async function getAllUsers(dbClient: PrismaClient = prisma) {
 
 /**
  * Updates a user's role (Promote / Demote)
- * Safety guard: An admin cannot demote themselves from GM
+ * Safety guards:
+ * 1. An admin cannot demote their own active GM account.
+ * 2. A GM cannot demote a fellow GM (Peer GM protection - requires Resort Owner).
  */
 export async function updateUserRole(
   adminUserId: string,
@@ -202,6 +204,14 @@ export async function updateUserRole(
     return { success: false, error: "User not found" };
   }
 
+  // Peer GM protection: Cannot demote a fellow GM
+  if (targetUser.role === "GM" && newRole !== "GM") {
+    return {
+      success: false,
+      error: "Security restriction: A General Manager cannot demote another General Manager. Executive-level changes require Resort Owner authorization.",
+    };
+  }
+
   const updated = await dbClient.user.update({
     where: { id: targetUserId },
     data: { role: newRole },
@@ -220,7 +230,9 @@ export async function updateUserRole(
 
 /**
  * Deletes a user account
- * Safety guard: An admin cannot delete their own account
+ * Safety guards:
+ * 1. An admin cannot delete their own active account.
+ * 2. A GM cannot delete a fellow GM (Peer GM protection - requires Resort Owner).
  */
 export async function deleteUser(
   adminUserId: string,
@@ -237,6 +249,14 @@ export async function deleteUser(
 
   if (!targetUser) {
     return { success: false, error: "User not found" };
+  }
+
+  // Peer GM protection: Cannot delete a fellow GM
+  if (targetUser.role === "GM") {
+    return {
+      success: false,
+      error: "Security restriction: A General Manager cannot delete another General Manager. Executive-level changes require Resort Owner authorization.",
+    };
   }
 
   await dbClient.user.delete({
