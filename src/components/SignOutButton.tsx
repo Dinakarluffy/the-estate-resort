@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { LogOut, Loader2, Coffee } from "lucide-react";
 
 interface SignOutButtonProps {
@@ -10,6 +11,11 @@ interface SignOutButtonProps {
 
 export function SignOutButton({ className, variant = "link" }: SignOutButtonProps) {
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -27,6 +33,26 @@ export function SignOutButton({ className, variant = "link" }: SignOutButtonProp
       window.location.href = "/";
     }
   };
+
+  const overlayContent = isSigningOut && mounted ? (
+    <div className="fixed inset-0 z-[9999] bg-[#181f16]/75 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl border border-[#ebded2] animate-in zoom-in-95 duration-200">
+        <div className="w-16 h-16 rounded-full bg-[#f5efe8] text-[#384432] flex items-center justify-center mx-auto mb-4 shadow-sm relative">
+          <Coffee className="w-8 h-8" />
+          <div className="absolute inset-0 rounded-full border-2 border-[#546a4a] border-t-transparent animate-spin" />
+        </div>
+        <h3 className="text-xl font-serif font-bold text-stone-900">
+          Signing Out...
+        </h3>
+        <p className="text-xs text-stone-600 mt-2 leading-relaxed">
+          Securely clearing your resort session.<br />Redirecting you to the home page in a moment.
+        </p>
+        <div className="mt-6 w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
+          <div className="bg-[#546a4a] h-full rounded-full animate-pulse w-3/4 mx-auto" />
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -62,26 +88,8 @@ export function SignOutButton({ className, variant = "link" }: SignOutButtonProp
         </button>
       )}
 
-      {/* Luxury Full-Screen Overlay while Signing Out */}
-      {isSigningOut && (
-        <div className="fixed inset-0 z-50 bg-[#2f392b]/80 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl border border-[#ebded2]">
-            <div className="w-14 h-14 rounded-full bg-[#f5efe8] text-[#384432] flex items-center justify-center mx-auto mb-4 shadow-inner relative">
-              <Coffee className="w-7 h-7" />
-              <div className="absolute inset-0 rounded-full border-2 border-[#546a4a] border-t-transparent animate-spin" />
-            </div>
-            <h3 className="text-lg font-serif font-bold text-stone-900">
-              Signing Out...
-            </h3>
-            <p className="text-xs text-stone-500 mt-1.5">
-              Securely clearing your resort session. Redirecting you to the home page in a moment.
-            </p>
-            <div className="mt-5 w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
-              <div className="bg-[#546a4a] h-full rounded-full animate-pulse w-3/4" />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Teleport overlay directly to document.body so it centers in the middle of the whole screen */}
+      {mounted && overlayContent && createPortal(overlayContent, document.body)}
     </>
   );
 }
