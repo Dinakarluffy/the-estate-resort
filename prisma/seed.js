@@ -20,7 +20,8 @@ async function main() {
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash('demo1234', salt);
 
-  const guest = await prisma.user.create({
+  // Core Demo Accounts (Reviewed by IsoCode)
+  await prisma.user.create({
     data: {
       email: 'guest@estate.com',
       passwordHash,
@@ -30,17 +31,17 @@ async function main() {
     },
   });
 
-  const staff = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: 'staff@estate.com',
       passwordHash,
-      name: 'Karthik Rao (Reservations)',
+      name: 'Karthik Rao (Reservations Staff)',
       role: 'STAFF',
       phone: '+91 98765 43211',
     },
   });
 
-  const gm = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: 'gm@estate.com',
       passwordHash,
@@ -50,7 +51,65 @@ async function main() {
     },
   });
 
-  console.log('✅ Created demo users: guest@estate.com, staff@estate.com, gm@estate.com (password: demo1234)');
+  // Additional Realistic Dummy Users for Admin Testing
+  const dummyUsers = [
+    {
+      name: 'Arun Patel',
+      email: 'arun.patel@example.com',
+      role: 'GUEST',
+      phone: '+91 98200 11223',
+    },
+    {
+      name: 'Deepa Nair',
+      email: 'deepa.nair@example.com',
+      role: 'GUEST',
+      phone: '+91 98450 33445',
+    },
+    {
+      name: 'Manish Joshi',
+      email: 'manish.joshi@corpcorp.in',
+      role: 'GUEST',
+      phone: '+91 97110 55667',
+    },
+    {
+      name: 'Sneha Reddy',
+      email: 'sneha.reddy@weddings.in',
+      role: 'GUEST',
+      phone: '+91 99000 77889',
+    },
+    {
+      name: 'Meera Sen (Front Desk)',
+      email: 'meera.sen@estate.com',
+      role: 'STAFF',
+      phone: '+91 98765 43213',
+    },
+    {
+      name: 'Rahul Verma (Duty Supervisor)',
+      email: 'rahul.verma@estate.com',
+      role: 'STAFF',
+      phone: '+91 98765 43214',
+    },
+    {
+      name: 'Anand Murthy (Operations Director)',
+      email: 'anand.murthy@estate.com',
+      role: 'GM',
+      phone: '+91 98765 43215',
+    },
+  ];
+
+  for (const u of dummyUsers) {
+    await prisma.user.create({
+      data: {
+        name: u.name,
+        email: u.email,
+        passwordHash,
+        role: u.role,
+        phone: u.phone,
+      },
+    });
+  }
+
+  console.log(`✅ Seeded ${3 + dummyUsers.length} users with diverse roles (GUEST, STAFF, GM) - default password: demo1234`);
 
   // 3. Room Types (76 keys total: 64 rooms + 12 villas)
   const roomTypesData = [
@@ -111,10 +170,9 @@ async function main() {
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + i);
     const dateStr = targetDate.toISOString().split('T')[0];
-    const isWeekend = targetDate.getDay() === 5 || targetDate.getDay() === 6; // Fri or Sat
+    const isWeekend = targetDate.getDay() === 5 || targetDate.getDay() === 6;
 
     for (const rt of createdRoomTypes) {
-      // Rates: Weekends are +20% higher
       const price = isWeekend ? Math.round(rt.basePrice * 1.2) : rt.basePrice;
       await prisma.rate.create({
         data: {
@@ -124,7 +182,6 @@ async function main() {
         },
       });
 
-      // Website Allotment (e.g. 4 rooms for standard, 3 for suite, 2 for villa)
       await prisma.allotment.create({
         data: {
           roomTypeId: rt.id,
@@ -153,7 +210,7 @@ async function main() {
   });
   console.log('✅ Seeded promo code: COFFEE10 (10% off up to ₹2,000)');
 
-  // 6. Sample Enquiries (Mandatory sample data from problem statement!)
+  // 6. Sample Enquiries
   const sampleEnquiries = [
     {
       enquiryNumber: 'ENQ-4410',
@@ -223,7 +280,7 @@ async function main() {
       assignedRole: 'GM',
       draftReply: `Dear Dr. Rao,\n\nWe sincerely apologize for this distressing experience. Our duty engineer and housekeeping supervisor have been dispatched to Villa 4 immediately with top priority to inspect the water heater and restore service.\n\nOur General Manager, Vikram Hegde, has been personally alerted to this matter and will visit you shortly.\n\nWarm regards,\nDuty Manager`,
       isAiGenerated: true,
-      requiresGmReview: true, // Complaints ALWAYS alert GM!
+      requiresGmReview: true,
       status: 'NEW',
     },
     {
@@ -233,14 +290,14 @@ async function main() {
       guestName: 'Anonymous Visitor',
       guestEmail: 'visitor@unknown.com',
       category: 'UNSORTED',
-      confidenceScore: 0.35, // Low confidence (< 0.7) -> Unsorted Lane!
+      confidenceScore: 0.35,
       extractedDates: null,
       extractedGuests: null,
       extractedBudget: null,
       assignedRole: 'GM',
       draftReply: `Dear Guest,\n\nThank you for contacting our resort. Could you please specify your preferred dates of stay, number of guests, or whether you are inquiring about a leisure holiday, wedding, or corporate event? We will be delighted to assist you.\n\nWarm regards,\nReservations Team`,
       isAiGenerated: true,
-      requiresGmReview: true, // Low confidence goes to GM unsorted lane!
+      requiresGmReview: true,
       status: 'NEW',
     },
   ];
@@ -248,7 +305,7 @@ async function main() {
   for (const enq of sampleEnquiries) {
     await prisma.enquiry.create({ data: enq });
   }
-  console.log(`✅ Seeded ${sampleEnquiries.length} sample enquiries (including ENQ-4410, 4411, 4412, Complaint, and Low-Confidence Unsorted)`);
+  console.log(`✅ Seeded ${sampleEnquiries.length} sample enquiries`);
 
   console.log('🎉 Database seeding complete!');
 }
