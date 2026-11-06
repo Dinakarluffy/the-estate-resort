@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, ShieldCheck, Coffee, Trash2, Search, AlertCircle, CheckCircle2, Loader2, Lock } from "lucide-react";
+import { createPortal } from "react-dom";
+import { User, ShieldCheck, Coffee, Trash2, Search, AlertCircle, CheckCircle2, Loader2, Lock, AlertTriangle } from "lucide-react";
 
 interface UserRecord {
   id: string;
@@ -23,6 +24,15 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // In-app custom confirmation modal state
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    fetchUsers();
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -37,10 +47,6 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const handleRoleChange = async (userId: string, newRole: "GUEST" | "STAFF" | "GM") => {
     setUpdatingId(userId);
@@ -72,10 +78,9 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to delete the account for ${userName}? This action cannot be undone.`)) {
-      return;
-    }
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    const { id: userId, name: userName } = userToDelete;
 
     setDeletingId(userId);
     setMessage(null);
@@ -96,6 +101,7 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
       setMessage({ type: "error", text: err.message || "Failed to delete user" });
     } finally {
       setDeletingId(null);
+      setUserToDelete(null);
     }
   };
 
@@ -278,12 +284,12 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
                             </button>
                           ) : null}
 
-                          {/* Delete Button */}
+                          {/* In-App Delete Button (Triggers modern custom modal) */}
                           <button
                             type="button"
                             title="Delete User Account"
                             disabled={isUpdating || isDeleting}
-                            onClick={() => handleDeleteUser(u.id, u.name)}
+                            onClick={() => setUserToDelete({ id: u.id, name: u.name })}
                             className="p-1 text-stone-400 hover:text-red-600 rounded transition disabled:opacity-50"
                           >
                             {isDeleting ? (
@@ -301,6 +307,45 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Modern In-App Confirmation Modal (Teleported to document.body) */}
+      {mounted && userToDelete && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 text-center animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-bold text-stone-900">
+              Delete User Account?
+            </h3>
+            <p className="text-xs text-stone-600 mt-2 leading-relaxed">
+              Are you sure you want to permanently delete the account for <strong className="text-stone-900">{userToDelete.name}</strong>? This action cannot be undone.
+            </p>
+
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                disabled={deletingId !== null}
+                onClick={() => setUserToDelete(null)}
+                className="px-4 py-2 rounded-lg border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingId !== null}
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {deletingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>{deletingId ? "Deleting..." : "Delete Account"}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
