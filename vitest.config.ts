@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    testTimeout: 20000, // 20s timeout for live AI network calls
     setupFiles: [],
   },
   resolve: {
