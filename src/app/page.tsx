@@ -2,7 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { verifySessionToken } from "@/lib/auth";
 import { testGeminiConnection, DEFAULT_GEMINI_MODEL } from "@/lib/gemini";
-import { Coffee, ShieldCheck, User, Calendar, Mail, LogIn, CheckCircle2, Sparkles } from "lucide-react";
+import { Coffee, ShieldCheck, User, Calendar, Mail, LogIn, CheckCircle2, Sparkles, UserPlus } from "lucide-react";
+import { SignOutButton } from "@/components/SignOutButton";
 
 export default async function HomePage() {
   const cookieStore = cookies();
@@ -64,23 +65,24 @@ export default async function HomePage() {
                   </Link>
                 )}
 
-                <form action="/api/auth/logout" method="POST">
-                  <button
-                    type="submit"
-                    className="text-xs text-stone-500 hover:text-stone-800 underline ml-1"
-                  >
-                    Sign Out
-                  </button>
-                </form>
+                <SignOutButton />
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#384432] hover:bg-[#2f392b] text-white text-xs font-semibold shadow-sm transition"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Staff & Guest Sign In</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/register"
+                  className="px-3 py-1.5 rounded-lg border border-[#384432] text-[#384432] hover:bg-stone-100 text-xs font-semibold transition"
+                >
+                  Create Account
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#384432] hover:bg-[#2f392b] text-white text-xs font-semibold shadow-sm transition"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </Link>
+              </div>
             )}
           </nav>
         </div>

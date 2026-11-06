@@ -8,6 +8,7 @@ import {
   canAccessStaffRoutes,
   canAccessGmRoutes,
   authenticateUser,
+  registerUser,
   UserSession,
 } from "./auth";
 
@@ -19,7 +20,7 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
 
       expect(hash).toBeDefined();
       expect(hash).not.toBe(password);
-      expect(hash.startsWith("$2")).toBe(true); // standard bcrypt format
+      expect(hash.startsWith("$2")).toBe(true);
 
       const isMatch = await verifyPassword(password, hash);
       expect(isMatch).toBe(true);
@@ -51,7 +52,7 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
 
       const token = await createSessionToken(sessionPayload);
       expect(typeof token).toBe("string");
-      expect(token.split(".").length).toBe(3); // Header.Payload.Signature
+      expect(token.split(".").length).toBe(3);
 
       const decoded = await verifySessionToken(token);
       expect(decoded).not.toBeNull();
@@ -72,22 +73,18 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
 
   describe("Role Hierarchy & Permission Checks", () => {
     it("validates hasRole correctly across role hierarchy", () => {
-      // GUEST permission
       expect(hasRole("GUEST", "GUEST")).toBe(true);
       expect(hasRole("STAFF", "GUEST")).toBe(true);
       expect(hasRole("GM", "GUEST")).toBe(true);
 
-      // STAFF permission
       expect(hasRole("GUEST", "STAFF")).toBe(false);
       expect(hasRole("STAFF", "STAFF")).toBe(true);
       expect(hasRole("GM", "STAFF")).toBe(true);
 
-      // GM permission (strictly GM only)
       expect(hasRole("GUEST", "GM")).toBe(false);
       expect(hasRole("STAFF", "GM")).toBe(false);
       expect(hasRole("GM", "GM")).toBe(true);
 
-      // Invalid roles
       expect(hasRole("", "GUEST")).toBe(false);
       expect(hasRole("UNKNOWN", "STAFF")).toBe(false);
     });
@@ -102,6 +99,66 @@ describe("auth.ts - Authentication & Role Access Engine", () => {
       expect(canAccessGmRoutes("GUEST")).toBe(false);
       expect(canAccessGmRoutes("STAFF")).toBe(false);
       expect(canAccessGmRoutes("GM")).toBe(true);
+    });
+  });
+
+  describe("registerUser", () => {
+    it("fails with invalid email or short password or empty name", async () => {
+      const res1 = await registerUser({ name: "A", email: "valid@test.com", password: "password123" });
+      expect(res1.success).toBe(false);
+      expect(res1.error).toContain("minimum 2 characters");
+
+      const res2 = await registerUser({ name: "Ravi Kumar", email: "notanemail", password: "password123" });
+      expect(res2.success).toBe(false);
+      expect(res2.error).toContain("valid email");
+
+      const res3 = await registerUser({ name: "Ravi Kumar", email: "ravi@test.com", password: "123" });
+      expect(res3.success).toBe(false);
+      expect(res3.error).toContain("at least 6 characters");
+    });
+
+    it("prevents duplicate account creation", async () => {
+      const mockPrisma = {
+        user: {
+          findUnique: async () => ({ id: "existing_user" }),
+        },
+      } as any;
+
+      const res = await registerUser(
+        { name: "Existing Guest", email: "guest@estate.com", password: "password123" },
+        mockPrisma
+      );
+      expect(res.success).toBe(false);
+      expect(res.error).toContain("already exists");
+    });
+
+    it("creates a new GUEST user with hashed password and session token", async () => {
+      const mockPrisma = {
+        user: {
+          findUnique: async () => null,
+          create: async ({ data }: any) => ({
+            id: "new_guest_101",
+            email: data.email,
+            name: data.name,
+            role: data.role,
+            passwordHash: data.passwordHash,
+          }),
+        },
+      } as any;
+
+      const res = await registerUser(
+        { name: "Aditi Rao", email: "aditi@test.com", password: "secret123Password" },
+        mockPrisma
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.user?.role).toBe("GUEST");
+      expect(res.user?.email).toBe("aditi@test.com");
+      expect(res.token).toBeDefined();
+
+      const decoded = await verifySessionToken(res.token!);
+      expect(decoded?.email).toBe("aditi@test.com");
+      expect(decoded?.role).toBe("GUEST");
     });
   });
 

@@ -153,10 +153,18 @@ function LoginForm() {
         </p>
       </div>
 
-      <div className="mt-6 text-center">
-        <Link href="/" className="text-xs text-stone-500 hover:text-stone-800 underline">
-          ← Return to Resort Homepage
-        </Link>
+      <div className="mt-6 text-center space-y-2">
+        <p className="text-xs text-stone-600">
+          New guest?{" "}
+          <Link href="/register" className="font-semibold text-[#546a4a] hover:underline">
+            Create an account
+          </Link>
+        </p>
+        <div>
+          <Link href="/" className="text-xs text-stone-400 hover:text-stone-700 underline">
+            ← Return to Resort Homepage
+          </Link>
+        </div>
       </div>
     </div>
   );

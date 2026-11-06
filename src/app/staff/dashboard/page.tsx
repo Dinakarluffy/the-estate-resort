@@ -3,6 +3,7 @@ import Link from "next/link";
 import { verifySessionToken } from "@/lib/auth";
 import { PrismaClient } from "@prisma/client";
 import { Coffee, Mail, CheckCircle2, ArrowRight } from "lucide-react";
+import { SignOutButton } from "@/components/SignOutButton";
 
 const prisma = new PrismaClient();
 
@@ -39,14 +40,7 @@ export default async function StaffDashboardPage() {
             >
               ← Back to Site
             </Link>
-            <form action="/api/auth/logout" method="POST">
-              <button
-                type="submit"
-                className="text-xs font-semibold px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition"
-              >
-                Sign Out
-              </button>
-            </form>
+            <SignOutButton variant="button" />
           </div>
         </div>
 

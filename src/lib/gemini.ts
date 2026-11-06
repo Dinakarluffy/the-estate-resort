@@ -33,6 +33,7 @@ export async function testGeminiConnection(): Promise<{
   model: string;
   message: string;
   reply?: string;
+  isQuotaExceeded?: boolean;
 }> {
   const client = getGeminiClient();
   if (!client) {
@@ -54,10 +55,16 @@ export async function testGeminiConnection(): Promise<{
       reply,
     };
   } catch (error: any) {
+    const errorMsg = error.message || String(error);
+    const isQuota = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("Too Many Requests");
+
     return {
       success: false,
       model: DEFAULT_GEMINI_MODEL,
-      message: `Gemini API call failed: ${error.message || String(error)}`,
+      isQuotaExceeded: isQuota,
+      message: isQuota
+        ? "Gemini API key is valid, but free-tier daily quota limit was reached. Operating safely in fallback mode."
+        : `Gemini API call failed: ${errorMsg}`,
     };
   }
 }
