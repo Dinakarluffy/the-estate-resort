@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: 'Playfair Display', Georgia, serif;
+}
+
+body {
+  color: #2e1c18;
+  background: #fbf8f5;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Scrollbar for luxury calm aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f5efe8;
+}
+::-webkit-scrollbar-thumb {
+  background: #b58269;
+  border-radius: 3px;
+}

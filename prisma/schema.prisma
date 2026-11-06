@@ -1,0 +1,160 @@
+// Prisma Schema for Chikkamagaluru Coffee Estate Resort
+// Supports SQLite locally (zero config for reviewers) & PostgreSQL in production
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// USER & ROLES (Guest, Staff, GM)
+// -----------------------------------------------------------------------------
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         String    @default("GUEST") // GUEST | STAFF | GM
+  phone        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  bookings     Booking[]
+}
+
+// -----------------------------------------------------------------------------
+// ROOM INVENTORY & ALLOTMENT
+// -----------------------------------------------------------------------------
+model RoomType {
+  id               String          @id @default(cuid())
+  name             String          // e.g. "Coffee Estate Villa", "Planter's Deluxe Room"
+  slug             String          @unique
+  description      String
+  maxGuests        Int
+  basePrice        Float           // Standard base price before seasonal daily rate
+  totalKeys        Int             // Total keys at the resort (e.g. 12 villas, 64 rooms = 76 total)
+  defaultAllotment Int             // Default website allotment (rest is reserved for offline/OTA)
+  amenities        String          // JSON array of amenity tags
+  photos           String          // JSON array of photo URLs
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  allotments       Allotment[]
+  rates            Rate[]
+  blackoutDates    BlackoutDate[]
+  bookings         Booking[]
+}
+
+// Daily website allotment control (The hard part: Prevents overbooking agency stock)
+model Allotment {
+  id               String   @id @default(cuid())
+  roomTypeId       String
+  date             String   // Format: "YYYY-MM-DD"
+  websiteAllotment Int      // Number of rooms admin designated for website direct sale
+  bookedCount      Int      @default(0) // Confirmed bookings on website for this date
+  
+  roomType         RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([roomTypeId, date])
+}
+
+// Daily rates (Overrides base price for weekends, peak seasons, festivals)
+model Rate {
+  id            String   @id @default(cuid())
+  roomTypeId    String
+  date          String   // Format: "YYYY-MM-DD"
+  pricePerNight Float
+
+  roomType      RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([roomTypeId, date])
+}
+
+// Blackout dates when direct booking is closed (e.g., full resort wedding, maintenance)
+model BlackoutDate {
+  id         String    @id @default(cuid())
+  roomTypeId String?   // Null means resort-wide blackout
+  date       String    // Format: "YYYY-MM-DD"
+  reason     String
+
+  roomType   RoomType? @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([roomTypeId, date])
+}
+
+// Promo codes
+model PromoCode {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  discountPercent Float    // e.g. 10.0 for 10%
+  maxDiscount     Float?   // Optional cap in INR
+  minTariff       Float?   // Minimum booking tariff to apply
+  validFrom       String   // "YYYY-MM-DD"
+  validTo         String   // "YYYY-MM-DD"
+  maxUses         Int      @default(100)
+  currentUses     Int      @default(0)
+  isActive        Boolean  @default(true)
+}
+
+// -----------------------------------------------------------------------------
+// BOOKING (Grounded with GST slabs and atomic allotment decrement)
+// -----------------------------------------------------------------------------
+model Booking {
+  id               String   @id @default(cuid())
+  bookingNumber    String   @unique // e.g. "EST-2026-8942"
+  userId           String?
+  guestName        String
+  guestEmail       String
+  guestPhone       String
+  roomTypeId       String
+  checkIn          String   // "YYYY-MM-DD"
+  checkOut         String   // "YYYY-MM-DD"
+  totalNights      Int
+  baseTariffTotal  Float
+  discountAmount   Float    @default(0)
+  netTaxableAmount Float
+  gstRatePercent   Float    // 12% if <= ₹7,500/night; 18% if > ₹7,500/night
+  gstAmount        Float
+  grandTotal       Float
+  status           String   @default("CONFIRMED") // CONFIRMED | CANCELLED | CHECKED_IN
+  paymentStatus    String   @default("PAID")      // PAID | REFUNDED
+  paymentReference String   // Mock payment ref e.g. "MOCK-PAY-827361"
+  promoCode        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User?    @relation(fields: [userId], references: [id])
+  roomType         RoomType @relation(fields: [roomTypeId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// UNIFIED ENQUIRY INBOX (Web form, forwarded Email, simulated WhatsApp)
+// -----------------------------------------------------------------------------
+model Enquiry {
+  id               String   @id @default(cuid())
+  enquiryNumber    String   @unique // e.g. "ENQ-4410"
+  source           String   // "WEB" | "EMAIL" | "WHATSAPP"
+  rawMessage       String
+  guestName        String?
+  guestEmail       String?
+  guestPhone       String?
+  
+  // AI Router fields
+  category         String   @default("UNSORTED") // "ROOM" | "WEDDING" | "OFFSITE" | "COMPLAINT" | "UNSORTED"
+  confidenceScore  Float    @default(0.0)
+  extractedDates   String?
+  extractedGuests  Int?
+  extractedBudget  String?
+  assignedRole     String   @default("STAFF") // "STAFF" | "GM"
+  draftReply       String?
+  isAiGenerated    Boolean  @default(false)
+  requiresGmReview Boolean  @default(false) // True if low confidence (<0.7) or complaint
+
+  status           String   @default("NEW") // "NEW" | "REVIEWED" | "SENT" | "ARCHIVED"
+  internalNotes    String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
