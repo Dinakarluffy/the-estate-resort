@@ -53,10 +53,14 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
   const [extending, setExtending] = useState(false);
   const [extendMessage, setExtendMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Cancellation State
+  const [cancelTarget, setCancelTarget] = useState<BookingItem | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const openExtendModal = (b: BookingItem) => {
     setSelectedBooking(b);
     setExtendMessage(null);
-    // Default new checkout to current checkout + 1 day
     const cur = new Date(b.checkOut);
     cur.setDate(cur.getDate() + 1);
     setNewCheckOut(cur.toISOString().split("T")[0]);
@@ -65,6 +69,60 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
   const closeExtendModal = () => {
     setSelectedBooking(null);
     setExtendMessage(null);
+  };
+
+  const openCancelModal = (b: BookingItem) => {
+    setCancelTarget(b);
+    setCancelMessage(null);
+  };
+
+  const closeCancelModal = () => {
+    setCancelTarget(null);
+    setCancelMessage(null);
+  };
+
+  const handleCancelBooking = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    setCancelMessage(null);
+
+    try {
+      const res = await fetch(`/api/bookings/${cancelTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setCancelMessage({ type: "error", text: data.error || "Failed to cancel reservation" });
+      } else {
+        setCancelMessage({
+          type: "success",
+          text: `Reservation ${cancelTarget.bookingNumber} successfully cancelled. 1 key has been restored to resort inventory and a refund of ₹${cancelTarget.grandTotal.toLocaleString("en-IN")} has been initiated.`,
+        });
+
+        // Update local state
+        setBookings((prev) =>
+          prev.map((item) =>
+            item.id === cancelTarget.id
+              ? {
+                  ...item,
+                  status: "CANCELLED",
+                  paymentStatus: "REFUNDED",
+                }
+              : item
+          )
+        );
+
+        setTimeout(() => {
+          closeCancelModal();
+        }, 2200);
+      }
+    } catch (err: any) {
+      setCancelMessage({ type: "error", text: err.message || "Cancellation failed" });
+    } finally {
+      setCancelling(false);
+    }
   };
 
   // Extension calculation
@@ -279,35 +337,50 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    {/* View Tax Invoice Voucher: Always available */}
-                    <Link
-                      href={`/confirmation/${booking.bookingNumber}`}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition"
-                    >
-                      <Printer className="w-3.5 h-3.5 text-stone-600" />
-                      <span>View Tax Invoice</span>
-                    </Link>
-
-                    {/* Manage/Extend Stay Button: ONLY shown if current date < checkout date */}
-                    {canExtend ? (
-                      <button
-                        type="button"
-                        onClick={() => openExtendModal(booking)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* View Tax Invoice Voucher: Always available */}
+                      <Link
+                        href={`/confirmation/${booking.bookingNumber}`}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition"
                       >
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Extend Stay</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 text-stone-400 text-xs font-medium border border-stone-200/80">
-                        <CheckCircle2 className="w-3 h-3 text-stone-400" />
-                        <span>Past Stay</span>
-                      </span>
-                    )}
-                  </div>
+                        <Printer className="w-3.5 h-3.5 text-stone-600" />
+                        <span>View Tax Invoice</span>
+                      </Link>
+
+                      {/* Cancel Stay Button: Available for active confirmed stays */}
+                      {isConfirmed && !isPastStay && (
+                        <button
+                          type="button"
+                          onClick={() => openCancelModal(booking)}
+                          className="inline-flex items-center gap-1 px-3 py-2 text-stone-500 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs font-semibold transition"
+                        >
+                          <span>Cancel Stay</span>
+                        </button>
+                      )}
+
+                      {/* Manage/Extend Stay Button: ONLY shown if current date < checkout date */}
+                      {canExtend ? (
+                        <button
+                          type="button"
+                          onClick={() => openExtendModal(booking)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Extend Stay</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      ) : isPastStay ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 text-stone-400 text-xs font-medium border border-stone-200/80">
+                          <CheckCircle2 className="w-3 h-3 text-stone-400" />
+                          <span>Past Stay</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 text-red-700 text-xs font-medium border border-red-200">
+                          <span>Cancelled</span>
+                        </span>
+                      )}
+                    </div>
                 </div>
               </div>
             </div>
@@ -446,6 +519,152 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Modal on /my-bookings */}
+      {cancelTarget && (
+        <div
+          className="fixed inset-0 z-[9999] bg-stone-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={closeCancelModal}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 text-left space-y-5 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-serif font-bold text-stone-900">
+                    Cancel Reservation
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Reference #{cancelTarget.bookingNumber} • {cancelTarget.roomType.name}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCancelModal}
+                className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Cancel Message Banner */}
+            {cancelMessage && (
+              <div
+                className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                  cancelMessage.type === "success"
+                    ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+                    : "bg-red-50 border border-red-200 text-red-800"
+                }`}
+              >
+                {cancelMessage.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                )}
+                <span>{cancelMessage.text}</span>
+              </div>
+            )}
+
+            {/* Dynamic 48-Hour Cancellation Policy Evaluation */}
+            {(() => {
+              const checkInDateTime = new Date(`${cancelTarget.checkIn}T14:00:00`);
+              const hoursUntilCheckIn = (checkInDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+              const isFreeEligible = hoursUntilCheckIn >= 48;
+
+              if (isFreeEligible) {
+                return (
+                  <div className="space-y-4">
+                    <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2 text-xs text-emerald-950">
+                      <div className="flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5 text-emerald-800">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>100% Free Cancellation Policy Applies</span>
+                        </span>
+                        <span className="font-mono bg-emerald-200/80 px-2 py-0.5 rounded text-[11px] text-emerald-900">
+                          {Math.max(1, Math.round(hoursUntilCheckIn / 24))} Days to Check-in
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 leading-relaxed">
+                        Your check-in is scheduled for <strong>{cancelTarget.checkIn} at 2:00 PM</strong> (more than 48 hours away). 
+                        Under our direct booking policy, you are eligible for an immediate full refund of <strong>₹{cancelTarget.grandTotal.toLocaleString("en-IN")}</strong>.
+                      </p>
+                      <div className="text-[10px] text-emerald-700 pt-1 border-t border-emerald-200/60">
+                        • 1 room key will be automatically returned to live website allotment.<br />
+                        • Refund will be credited to original payment reference: <code>{cancelTarget.bookingNumber}</code>.
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={closeCancelModal}
+                        className="px-4 py-2 border border-stone-300 text-stone-700 rounded-lg text-xs font-semibold hover:bg-stone-100 transition"
+                      >
+                        Keep Reservation
+                      </button>
+                      <button
+                        type="button"
+                        disabled={cancelling}
+                        onClick={handleCancelBooking}
+                        className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow"
+                      >
+                        {cancelling ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Cancelling...</span>
+                          </>
+                        ) : (
+                          <span>Confirm Cancellation & Refund ₹{cancelTarget.grandTotal.toLocaleString("en-IN")}</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="space-y-4">
+                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-950">
+                      <div className="flex items-center justify-between font-bold text-amber-900">
+                        <span className="flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-amber-700" />
+                          <span>Within 48-Hour Late Cancellation Window</span>
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-800 leading-relaxed">
+                        Your check-in is on <strong>{cancelTarget.checkIn} at 2:00 PM</strong> (less than 48 hours away).
+                        Per resort operations policy, automated online cancellations close 48 hours before arrival.
+                      </p>
+                      <div className="p-2.5 bg-white/80 rounded-lg border border-amber-300/60 text-[11px] text-stone-700 space-y-0.5">
+                        <strong>Front Desk Duty Hotline:</strong>
+                        <div>Direct Phone: +91 8262 290123 / +91 98765 43213</div>
+                        <div>Email: reservations@estate.com</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={closeCancelModal}
+                        className="px-4 py-2 bg-stone-800 hover:bg-stone-900 text-white rounded-lg text-xs font-semibold transition"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+            })()}
           </div>
         </div>
       )}
