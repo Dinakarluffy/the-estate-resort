@@ -20,6 +20,9 @@ import {
 import { SignOutButton } from "@/components/SignOutButton";
 import { GuestBookingsList, BookingItem } from "@/components/bookings/GuestBookingsList";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "My Reservations | The Estate Chikkamagaluru",
   description: "View and manage your direct resort reservations, stay schedules, and official GST tax invoices.",
@@ -61,6 +64,7 @@ export default async function MyBookingsPage() {
       paymentStatus: b.paymentStatus,
       promoCode: b.promoCode,
       createdAt: b.createdAt.toISOString(),
+      updatedAt: b.updatedAt.toISOString(),
       roomType: {
         id: b.roomTypeId,
         name: b.roomType.name,

@@ -31,6 +31,7 @@ export interface BookingItem {
   paymentStatus: string;
   promoCode?: string | null;
   createdAt: string | Date;
+  updatedAt?: string | Date;
   roomType: {
     id?: string;
     name: string;
@@ -206,22 +207,27 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
 
       <div className="grid grid-cols-1 gap-5">
         {bookings.map((booking, idx) => {
+          const isCancelled = booking.status === "CANCELLED";
           const isConfirmed = booking.status === "CONFIRMED";
           // Business rule: Can ONLY extend if booking is active/upcoming (current date < checkout date)
           const canExtend = isConfirmed && todayStr < booking.checkOut;
-          const isPastStay = booking.checkOut <= todayStr;
+          const isPastStay = isConfirmed && booking.checkOut <= todayStr;
 
           return (
             <div
               key={booking.id}
-              className="bg-white border border-[#ebded2] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col md:flex-row group"
+              className={`rounded-2xl overflow-hidden transition flex flex-col md:flex-row group ${
+                isCancelled
+                  ? "bg-stone-50/80 border border-stone-200 opacity-80 shadow-none"
+                  : "bg-white border border-[#ebded2] shadow-sm hover:shadow-md"
+              }`}
             >
               {/* Room Thumbnail Photo */}
               <div className="md:w-72 h-48 md:h-auto min-h-[190px] relative bg-stone-900 overflow-hidden shrink-0">
                 <img
                   src={booking.roomPhotos[0]}
                   alt={booking.roomType.name}
-                  className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                  className={`w-full h-full object-cover transition duration-300 ${isCancelled ? "grayscale" : "group-hover:scale-105"}`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none" />
 
@@ -229,14 +235,23 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
                 <div className="absolute top-3 left-3 flex items-center gap-1.5">
                   <span
                     className={`px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm backdrop-blur-sm ${
-                      isPastStay
+                      isCancelled
+                        ? "bg-red-700/95 text-white flex items-center gap-1"
+                        : isPastStay
                         ? "bg-stone-700/90 text-stone-200"
-                        : isConfirmed
-                        ? "bg-emerald-700/90 text-white"
-                        : "bg-red-800/90 text-white"
+                        : "bg-emerald-700/90 text-white"
                     }`}
                   >
-                    {isPastStay ? "COMPLETED STAY" : booking.status}
+                    {isCancelled ? (
+                      <>
+                        <X className="w-3 h-3" />
+                        <span>CANCELLED</span>
+                      </>
+                    ) : isPastStay ? (
+                      "COMPLETED STAY"
+                    ) : (
+                      "CONFIRMED"
+                    )}
                   </span>
                 </div>
 
@@ -253,7 +268,7 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
 
               {/* Booking Information Details */}
               <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                {/* Top Bar: Booking Reference & Date Created */}
+                {/* Top Bar: Booking Reference & Date Created / Cancelled */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-stone-100 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-stone-400 font-medium">Booking Reference:</span>
@@ -262,16 +277,32 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
                     </span>
                   </div>
 
-                  <div className="text-[11px] text-stone-400 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>
-                      Booked on {new Date(booking.createdAt).toLocaleDateString("en-IN", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </div>
+                  {/* Header Date: If cancelled, show exact cancellation date; otherwise booked date */}
+                  {isCancelled ? (
+                    <div className="text-[11px] text-red-700 font-semibold flex items-center gap-1.5 bg-red-50 px-2.5 py-0.5 rounded border border-red-200">
+                      <X className="w-3.5 h-3.5 text-red-600" />
+                      <span>
+                        Cancelled on{" "}
+                        {new Date(booking.updatedAt || booking.createdAt).toLocaleDateString("en-IN", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-stone-400 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>
+                        Booked on{" "}
+                        {new Date(booking.createdAt).toLocaleDateString("en-IN", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Middle: Stay Schedule & Breakdown */}
@@ -296,7 +327,7 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
                       {booking.checkOut}
                     </strong>
                     <span className="text-[10px] text-stone-500">
-                      {isPastStay ? "Departed (11:00 AM)" : "11:00 AM Departure"}
+                      {isCancelled ? "Cancelled" : isPastStay ? "Departed (11:00 AM)" : "11:00 AM Departure"}
                     </span>
                   </div>
 
@@ -317,70 +348,89 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
                 {/* Bottom Bar: Financials & Action Buttons */}
                 <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
-                    <div className="flex items-center gap-2 text-xs flex-wrap">
-                      <span className="text-stone-500">Amount Paid:</span>
-                      <span className="font-serif font-bold text-lg text-stone-900">
-                        ₹{booking.grandTotal.toLocaleString("en-IN")}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                        {booking.paymentStatus}
-                      </span>
-                      {booking.promoCode && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 flex items-center gap-1">
-                          <Tag className="w-2.5 h-2.5" />
-                          <span>{booking.promoCode} applied</span>
+                    {isCancelled ? (
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        <span className="text-stone-400">Total Refund:</span>
+                        <span className="font-serif font-bold text-lg text-stone-400 line-through">
+                          ₹{booking.grandTotal.toLocaleString("en-IN")}
                         </span>
-                      )}
-                    </div>
+                        <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
+                          REFUNDED
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        <span className="text-stone-500">Amount Paid:</span>
+                        <span className="font-serif font-bold text-lg text-stone-900">
+                          ₹{booking.grandTotal.toLocaleString("en-IN")}
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          {booking.paymentStatus}
+                        </span>
+                        {booking.promoCode && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 flex items-center gap-1">
+                            <Tag className="w-2.5 h-2.5" />
+                            <span>{booking.promoCode} applied</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="text-[10px] text-stone-400">
-                      Statutory Invoice: Net ₹{booking.netTaxableAmount.toLocaleString("en-IN")} + {booking.gstRatePercent}% GST (₹{booking.gstAmount.toLocaleString("en-IN")}) • SAC 996311
+                      {isCancelled
+                        ? "Reservation cancelled and 1 key restored to resort inventory."
+                        : `Statutory Invoice: Net ₹${booking.netTaxableAmount.toLocaleString("en-IN")} + ${booking.gstRatePercent}% GST (₹${booking.gstAmount.toLocaleString("en-IN")}) • SAC 996311`}
                     </div>
                   </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* View Tax Invoice Voucher: Always available */}
-                      <Link
-                        href={`/confirmation/${booking.bookingNumber}`}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition"
-                      >
-                        <Printer className="w-3.5 h-3.5 text-stone-600" />
-                        <span>View Tax Invoice</span>
-                      </Link>
-
-                      {/* Cancel Stay Button: Available for active confirmed stays */}
-                      {isConfirmed && !isPastStay && (
-                        <button
-                          type="button"
-                          onClick={() => openCancelModal(booking)}
-                          className="inline-flex items-center gap-1 px-3 py-2 text-stone-500 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs font-semibold transition"
+                  {/* Actions: IF CANCELLED, HIDE ALL ACTION BUTTONS! */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {isCancelled ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-700 text-xs font-semibold border border-red-200">
+                        <X className="w-3.5 h-3.5 text-red-600" />
+                        <span>Booking Cancelled & Refunded</span>
+                      </span>
+                    ) : (
+                      <>
+                        {/* View Tax Invoice Voucher */}
+                        <Link
+                          href={`/confirmation/${booking.bookingNumber}`}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition"
                         >
-                          <span>Cancel Stay</span>
-                        </button>
-                      )}
+                          <Printer className="w-3.5 h-3.5 text-stone-600" />
+                          <span>View Tax Invoice</span>
+                        </Link>
 
-                      {/* Manage/Extend Stay Button: ONLY shown if current date < checkout date */}
-                      {canExtend ? (
-                        <button
-                          type="button"
-                          onClick={() => openExtendModal(booking)}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-semibold transition shadow-sm"
-                        >
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Extend Stay</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      ) : isPastStay ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 text-stone-400 text-xs font-medium border border-stone-200/80">
-                          <CheckCircle2 className="w-3 h-3 text-stone-400" />
-                          <span>Past Stay</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 text-red-700 text-xs font-medium border border-red-200">
-                          <span>Cancelled</span>
-                        </span>
-                      )}
-                    </div>
+                        {/* Cancel Stay Button: Available for active confirmed stays */}
+                        {isConfirmed && !isPastStay && (
+                          <button
+                            type="button"
+                            onClick={() => openCancelModal(booking)}
+                            className="inline-flex items-center gap-1 px-3 py-2 text-stone-500 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs font-semibold transition"
+                          >
+                            <span>Cancel Stay</span>
+                          </button>
+                        )}
+
+                        {/* Manage/Extend Stay Button: ONLY shown if current date < checkout date */}
+                        {canExtend ? (
+                          <button
+                            type="button"
+                            onClick={() => openExtendModal(booking)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-semibold transition shadow-sm"
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Extend Stay</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 text-stone-400 text-xs font-medium border border-stone-200/80">
+                            <CheckCircle2 className="w-3 h-3 text-stone-400" />
+                            <span>Past Stay</span>
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
