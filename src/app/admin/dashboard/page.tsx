@@ -86,9 +86,15 @@ export default async function AdminDashboardPage() {
             <div className="text-3xl font-serif font-bold text-stone-900 mt-2">
               45 Days Active
             </div>
-            <p className="text-xs text-stone-500 mt-1">
+            <p className="text-xs text-stone-500 mt-1 mb-3">
               Allotment controls prevent overbooking agency inventory
             </p>
+            <Link
+              href="/admin/rates"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition"
+            >
+              <span>Manage Calendar & Allotments →</span>
+            </Link>
           </div>
 
           <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm">

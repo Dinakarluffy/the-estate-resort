@@ -80,3 +80,11 @@ export function calculateTariffGST(
     grandTotal,
   };
 }
+
+/**
+ * Standard Indian Rupee currency formatter (e.g. ₹9,500)
+ */
+export function formatCurrency(amount: number): string {
+  return `₹${Math.round(amount).toLocaleString("en-IN")}`;
+}
+

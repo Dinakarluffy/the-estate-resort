@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getGSTRatePercent, calculateTariffGST } from "./gst";
+import { getGSTRatePercent, calculateTariffGST, formatCurrency } from "./gst";
 
 describe("gst.ts - Statutory Indian Hotel GST Engine", () => {
   describe("getGSTRatePercent() - Threshold Boundary Tests", () => {
@@ -72,6 +72,12 @@ describe("gst.ts - Statutory Indian Hotel GST Engine", () => {
       expect(breakdown.netTaxableAmount).toBe(0);
       expect(breakdown.gstAmount).toBe(0);
       expect(breakdown.grandTotal).toBe(0);
+    });
+
+    it("formats Indian Rupee currency with symbol and thousands separators", () => {
+      expect(formatCurrency(6500)).toBe("₹6,500");
+      expect(formatCurrency(14560)).toBe("₹14,560");
+      expect(formatCurrency(100000)).toBe("₹1,00,000");
     });
 
     it("throws error for non-positive rate or invalid nights", () => {

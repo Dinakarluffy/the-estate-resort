@@ -55,36 +55,70 @@ export default async function StaffDashboardPage() {
           </p>
         </div>
 
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                Seeded Enquiries in Inbox
-              </span>
-              <Mail className="w-4 h-4 text-emerald-700" />
+        {/* Operational Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                  Direct Bookings & PMS
+                </span>
+                <Coffee className="w-4 h-4 text-emerald-700" />
+              </div>
+              <div className="text-3xl font-serif font-bold text-stone-900 mt-2">
+                Operational
+              </div>
+              <p className="text-xs text-stone-500 mt-1">
+                View arrivals, mark check-ins, and 1-click export to hotel PMS
+              </p>
             </div>
-            <div className="text-3xl font-serif font-bold text-stone-900 mt-2">
-              {enquiryCount}
-            </div>
-            <p className="text-xs text-stone-500 mt-1">
-              Includes ENQ-4410, ENQ-4411, ENQ-4412 + complaint + unsorted
-            </p>
+            <Link
+              href="/staff/bookings"
+              className="mt-4 inline-flex items-center justify-between text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 px-3 py-2 rounded-lg transition"
+            >
+              <span>View Bookings & Export →</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
-          <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                Resort Room Types
-              </span>
-              <Coffee className="w-4 h-4 text-emerald-700" />
+          <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                  Enquiries in Inbox
+                </span>
+                <Mail className="w-4 h-4 text-emerald-700" />
+              </div>
+              <div className="text-3xl font-serif font-bold text-stone-900 mt-2">
+                {enquiryCount} Leads
+              </div>
+              <p className="text-xs text-stone-500 mt-1">
+                Includes ENQ-4410, ENQ-4411, ENQ-4412 + complaint + unsorted
+              </p>
             </div>
-            <div className="text-3xl font-serif font-bold text-stone-900 mt-2">
-              {roomCount} Types (76 Keys)
+            <span className="mt-4 inline-flex items-center text-xs font-semibold text-stone-500 bg-stone-100 px-3 py-2 rounded-lg">
+              AI Routing Active
+            </span>
+          </div>
+
+          <div className="bg-white border border-[#ebded2] p-5 rounded-xl shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                  Resort Room Types
+                </span>
+                <Coffee className="w-4 h-4 text-emerald-700" />
+              </div>
+              <div className="text-3xl font-serif font-bold text-stone-900 mt-2">
+                {roomCount} Types (76 Keys)
+              </div>
+              <p className="text-xs text-stone-500 mt-1">
+                64 Rooms + 12 Villas (Mullayanagiri, Chikkamagaluru)
+              </p>
             </div>
-            <p className="text-xs text-stone-500 mt-1">
-              64 Rooms + 12 Villas (Mullayanagiri, Chikkamagaluru)
-            </p>
+            <span className="mt-4 inline-flex items-center text-xs font-semibold text-stone-500 bg-stone-100 px-3 py-2 rounded-lg">
+              17 Keys Direct Allotment
+            </span>
           </div>
         </div>
       </div>
