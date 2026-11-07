@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   Calendar,
@@ -16,7 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Camera,
-  Maximize2,
   X,
   Compass,
   Bed,
@@ -104,7 +104,12 @@ const PHOTO_CAPTIONS: Record<string, string[]> = {
 
 function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn: string; checkOut: string; guests: number }) {
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
-  const [showGallery, setShowGallery] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const photos = room.photos && room.photos.length > 0 ? room.photos : ["/images/rooms/heritage-1.jpg"];
   const captions = PHOTO_CAPTIONS[room.roomSlug] || [
@@ -118,30 +123,52 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
     bed: "King Bed",
   };
 
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePrev = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setActivePhotoIdx((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
   };
 
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleNext = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setActivePhotoIdx((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
   };
+
+  // Keyboard navigation when popup is open
+  useEffect(() => {
+    if (!showPopup) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowPopup(false);
+      } else if (e.key === "ArrowLeft") {
+        setActivePhotoIdx((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+      } else if (e.key === "ArrowRight") {
+        setActivePhotoIdx((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showPopup, photos.length]);
 
   const hasBlackout = !room.isAvailable && room.blackoutReason;
 
   return (
     <div className="bg-white border border-[#ebded2] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col lg:flex-row group">
-      {/* Photo Carousel (3 Photos) */}
-      <div className="lg:w-2/5 relative h-72 lg:h-auto min-h-[300px] bg-stone-900 overflow-hidden select-none">
+      {/* Photo Area (Click to open full-screen popup) */}
+      <div
+        onClick={() => setShowPopup(true)}
+        className="lg:w-2/5 relative h-72 lg:h-auto min-h-[300px] bg-stone-900 overflow-hidden select-none cursor-pointer"
+        title="Click to expand photo"
+      >
         <img
           src={photos[activePhotoIdx]}
           alt={`${room.roomTypeName} - view ${activePhotoIdx + 1}`}
-          className="w-full h-full object-cover transition duration-300 group-hover:scale-102"
+          className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
         />
 
         {/* Gradient overlays for readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/35 pointer-events-none" />
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
@@ -164,25 +191,15 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
               </span>
             )}
           </div>
-
-          {/* View Gallery Button */}
-          <button
-            type="button"
-            onClick={() => setShowGallery(true)}
-            className="pointer-events-auto p-1.5 rounded-full bg-black/50 hover:bg-black/75 text-white backdrop-blur-sm transition"
-            title="Open Fullscreen Gallery"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
         </div>
 
-        {/* Carousel Navigation Arrows (Previous / Next) */}
+        {/* In-Card Carousel Navigation Arrows (Previous / Next) */}
         {photos.length > 1 && (
           <>
             <button
               type="button"
               onClick={handlePrev}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm transition"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-sm transition border border-white/20 shadow"
               title="Previous Photo"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -190,7 +207,7 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
             <button
               type="button"
               onClick={handleNext}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm transition"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-sm transition border border-white/20 shadow"
               title="Next Photo"
             >
               <ChevronRight className="w-4 h-4" />
@@ -200,11 +217,11 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
 
         {/* Bottom Photo Caption & Dot Indicators */}
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white text-xs pointer-events-none">
-          <div className="bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[11px] max-w-[75%] truncate">
+          <div className="bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[11px] max-w-[75%] truncate border border-white/10">
             {captions[activePhotoIdx] || `View ${activePhotoIdx + 1} of ${photos.length}`}
           </div>
 
-          <div className="flex items-center gap-1.5 pointer-events-auto bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+          <div className="flex items-center gap-1.5 pointer-events-auto bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/10">
             <Camera className="w-3 h-3 text-stone-300" />
             <span className="text-[10px] font-bold">
               {activePhotoIdx + 1}/{photos.length}
@@ -214,7 +231,10 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setActivePhotoIdx(idx)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePhotoIdx(idx);
+                  }}
                   className={`w-1.5 h-1.5 rounded-full transition ${
                     idx === activePhotoIdx ? "bg-white scale-125" : "bg-white/40"
                   }`}
@@ -349,49 +369,105 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
         </div>
       </div>
 
-      {/* Fullscreen Photo Gallery Lightbox Modal */}
-      {showGallery && (
+      {/* Modern Pop-Up Photo Modal (Single Image with <, > arrows and X button) */}
+      {mounted && showPopup && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-stone-950/90 backdrop-blur-md flex flex-col justify-between p-4 md:p-8 animate-in fade-in duration-200"
-          onClick={() => setShowGallery(false)}
+          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 md:p-6 animate-in fade-in duration-150 select-none"
+          onClick={() => setShowPopup(false)}
         >
-          <div className="flex items-center justify-between text-white pb-4 border-b border-white/10" onClick={(e) => e.stopPropagation()}>
+          {/* Top Bar with Title, Counter and X Button */}
+          <div
+            className="flex items-center justify-between text-white max-w-5xl mx-auto w-full pb-3 border-b border-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div>
-              <h3 className="font-serif font-bold text-lg">{room.roomTypeName} Gallery</h3>
-              <p className="text-xs text-stone-400">3 views of the room and private estate grounds</p>
+              <h3 className="font-serif font-bold text-base md:text-lg text-white">
+                {room.roomTypeName}
+              </h3>
+              <p className="text-xs text-stone-400">
+                Photo {activePhotoIdx + 1} of {photos.length} • {captions[activePhotoIdx]}
+              </p>
             </div>
+
+            {/* Cancel / Close (X) Button */}
             <button
               type="button"
-              onClick={() => setShowGallery(false)}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+              onClick={() => setShowPopup(false)}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition flex items-center gap-1.5 text-xs font-semibold"
+              title="Close (Esc)"
             >
               <X className="w-5 h-5" />
+              <span className="hidden sm:inline">Close</span>
             </button>
           </div>
 
+          {/* Central Image Viewport with < and > Navigation Buttons */}
           <div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto py-6 max-w-6xl mx-auto w-full"
+            className="relative flex-1 flex items-center justify-center my-auto max-w-5xl mx-auto w-full px-2 md:px-8 py-4"
             onClick={(e) => e.stopPropagation()}
           >
-            {photos.map((photo, idx) => (
-              <div key={idx} className="bg-stone-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col">
-                <div className="h-64 overflow-hidden">
-                  <img src={photo} alt={captions[idx]} className="w-full h-full object-cover hover:scale-105 transition duration-300" />
-                </div>
-                <div className="p-4 bg-stone-900 text-white">
-                  <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider block">
-                    View 0{idx + 1}
-                  </span>
-                  <p className="text-xs font-semibold mt-1">{captions[idx]}</p>
-                </div>
-              </div>
-            ))}
+            {/* The Selected Single Large Image */}
+            <img
+              src={photos[activePhotoIdx]}
+              alt={captions[activePhotoIdx]}
+              className="max-h-[72vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl border border-white/15 animate-in zoom-in-95 duration-150"
+            />
+
+            {/* Left (<) Navigation Arrow */}
+            {photos.length > 1 && (
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/75 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition shadow-xl hover:scale-105"
+                title="Previous Photo (←)"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Right (>) Navigation Arrow */}
+            {photos.length > 1 && (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/75 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition shadow-xl hover:scale-105"
+                title="Next Photo (→)"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
           </div>
 
-          <div className="text-center text-xs text-stone-400" onClick={(e) => e.stopPropagation()}>
-            Click anywhere outside or press Close to return to room list
+          {/* Bottom Bar with Caption and Clickable Indicator Dots */}
+          <div
+            className="max-w-5xl mx-auto w-full text-center pb-2 pt-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-white drop-shadow">
+              {captions[activePhotoIdx]}
+            </p>
+
+            <div className="flex items-center justify-center gap-2 mt-2">
+              {photos.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActivePhotoIdx(idx)}
+                  className={`transition-all rounded-full ${
+                    idx === activePhotoIdx
+                      ? "w-7 h-2 bg-amber-400"
+                      : "w-2 h-2 bg-white/40 hover:bg-white/70"
+                  }`}
+                  title={`View photo ${idx + 1}`}
+                />
+              ))}
+            </div>
+            <p className="text-[11px] text-stone-400 mt-1">
+              Press Left/Right arrows to navigate • Esc or Close button to exit
+            </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
