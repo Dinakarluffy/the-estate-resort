@@ -48,6 +48,15 @@ export default async function RoomsPage() {
               Rooms & Villas
             </Link>
 
+            {user && (
+              <Link
+                href="/my-bookings"
+                className="text-xs font-semibold text-stone-600 hover:text-stone-900 transition px-2 py-1"
+              >
+                My Bookings
+              </Link>
+            )}
+
             {user ? (
               <div className="flex items-center gap-3 ml-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f5efe8] rounded-full border border-[#ebded2] text-xs">
