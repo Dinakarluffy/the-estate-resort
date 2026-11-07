@@ -4,6 +4,7 @@ import { verifySessionToken } from "@/lib/auth";
 import { PrismaClient } from "@prisma/client";
 import { Coffee, Mail, CheckCircle2, ArrowRight } from "lucide-react";
 import { SignOutButton } from "@/components/SignOutButton";
+import { UnifiedEnquiryInbox } from "@/components/staff/UnifiedEnquiryInbox";
 
 const prisma = new PrismaClient();
 
@@ -17,7 +18,7 @@ export default async function StaffDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#fbf8f5] p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between bg-white border border-[#ebded2] p-6 rounded-2xl shadow-sm">
           <div className="flex items-center gap-3">
@@ -121,6 +122,9 @@ export default async function StaffDashboardPage() {
             </span>
           </div>
         </div>
+
+        {/* Unified AI Enquiry Inbox Component */}
+        <UnifiedEnquiryInbox />
       </div>
     </div>
   );

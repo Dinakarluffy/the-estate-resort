@@ -48,6 +48,13 @@ export default async function RoomsPage() {
               Rooms & Villas
             </Link>
 
+            <Link
+              href="/events"
+              className="text-xs font-semibold text-stone-600 hover:text-stone-900 transition px-2 py-1"
+            >
+              Weddings & Events
+            </Link>
+
             {user && (
               <Link
                 href="/my-bookings"

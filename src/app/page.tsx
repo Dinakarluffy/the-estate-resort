@@ -37,6 +37,12 @@ export default async function HomePage() {
             >
               Rooms & Villas
             </Link>
+            <Link
+              href="/events"
+              className="text-xs font-semibold text-stone-600 hover:text-stone-900 transition px-2.5 py-1.5 rounded-lg hover:bg-stone-100"
+            >
+              Weddings & Events
+            </Link>
             {user && (
               <Link
                 href="/my-bookings"
