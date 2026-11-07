@@ -8,7 +8,8 @@ import { Coffee, ShieldCheck, User, Sparkles, AlertCircle, Eye, EyeOff } from "l
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromUrl = searchParams.get("from") || "/";
+  const fromUrl = searchParams.get("from") || searchParams.get("redirect") || "/";
+  const isBookingRedirect = fromUrl.includes("/book");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,6 +72,15 @@ function LoginForm() {
           Sign in to access your bookings or resort operations
         </p>
       </div>
+
+      {isBookingRedirect && (
+        <div className="mb-6 p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
+          <Coffee className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div>
+            <strong>Sign In to Complete Booking:</strong> Please sign in with your guest account (or click 1-Click Guest Demo below) to confirm your reservation.
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-700">
