@@ -83,19 +83,25 @@ export function BookingWizard({ user }: BookingWizardProps) {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
-  // Fetch Room Info
+  // Live Availability & Allotment tracking
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [availableKeys, setAvailableKeys] = useState(1);
+  const [blackoutReason, setBlackoutReason] = useState<string | undefined>(undefined);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+
+  // Fetch Room Info & Availability whenever dates change
   useEffect(() => {
+    let isCurrent = true;
     async function fetchRoom() {
       if (!roomTypeIdParam) return;
+      setCheckingAvailability(true);
       try {
-        const cin = checkIn || new Date().toISOString().split("T")[0];
-        const nextDay = new Date();
-        nextDay.setDate(nextDay.getDate() + 2);
-        const cout = checkOut || nextDay.toISOString().split("T")[0];
+        const cin = checkIn || defaultCheckIn;
+        const cout = checkOut || defaultCheckOut;
 
         const res = await fetch(`/api/availability?checkIn=${cin}&checkOut=${cout}&roomTypeId=${roomTypeIdParam}`);
         const data = await res.json();
-        if (data.success && data.data) {
+        if (isCurrent && data.success && data.data) {
           setRoom({
             id: data.data.roomTypeId,
             name: data.data.roomTypeName,
@@ -105,15 +111,24 @@ export function BookingWizard({ user }: BookingWizardProps) {
             photos: data.data.photos || ["/images/rooms/heritage-1.jpg"],
             amenities: data.data.amenities || [],
           });
+          setIsAvailable(data.data.isAvailable);
+          setAvailableKeys(data.data.availableKeys);
+          setBlackoutReason(data.data.blackoutReason);
         }
       } catch (e) {
         console.error("Failed to load room details", e);
       } finally {
-        setLoadingRoom(false);
+        if (isCurrent) {
+          setLoadingRoom(false);
+          setCheckingAvailability(false);
+        }
       }
     }
     fetchRoom();
-  }, [roomTypeIdParam]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [roomTypeIdParam, checkIn, checkOut]);
 
   // Compute Nights
   const computeNights = () => {
@@ -348,31 +363,124 @@ export function BookingWizard({ user }: BookingWizardProps) {
             </span>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6 items-center">
-            <div className="w-full md:w-1/3 h-48 rounded-xl overflow-hidden shadow-sm bg-stone-100 shrink-0">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="w-full md:w-1/3 h-56 rounded-xl overflow-hidden shadow-sm bg-stone-100 shrink-0">
               <img src={room.photos[0]} alt={room.name} className="w-full h-full object-cover" />
             </div>
 
-            <div className="flex-1 space-y-3 w-full">
-              <h3 className="font-serif font-bold text-lg text-stone-900">{room.name}</h3>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Direct booking reservation at The Estate Chikkamagaluru. Zero OTA commission, free cancellation up to 48 hours before check-in.
-              </p>
+            <div className="flex-1 space-y-4 w-full">
+              <div>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h3 className="font-serif font-bold text-lg text-stone-900">{room.name}</h3>
+                  {isAvailable ? (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{availableKeys} Keys Available Direct</span>
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-800">
+                      {blackoutReason ? "Private Buyout" : "Sold Out on Dates"}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+                  Direct booking reservation at The Estate Chikkamagaluru. Zero OTA commission, free cancellation up to 48 hours before check-in.
+                </p>
+              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs">
-                <div className="p-2.5 bg-stone-50 rounded-lg border border-stone-200">
-                  <span className="text-[10px] text-stone-400 font-semibold uppercase block">Check-in</span>
-                  <strong className="text-stone-900 text-xs">{checkIn}</strong>
+              {/* Editable Dates & Guests Card */}
+              <div className="p-3.5 bg-stone-50 border border-stone-200 rounded-xl space-y-3">
+                <div className="text-[11px] font-bold text-stone-700 flex items-center justify-between">
+                  <span>Customize Your Stay Dates & Party</span>
+                  <span className="text-[10px] text-stone-400 font-normal">Click inputs to edit</span>
                 </div>
-                <div className="p-2.5 bg-stone-50 rounded-lg border border-stone-200">
-                  <span className="text-[10px] text-stone-400 font-semibold uppercase block">Check-out</span>
-                  <strong className="text-stone-900 text-xs">{checkOut}</strong>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  {/* Check-in Date */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase block mb-1">
+                      Check-in Date
+                    </label>
+                    <input
+                      type="date"
+                      min={defaultCheckIn}
+                      value={checkIn}
+                      onChange={(e) => {
+                        const newIn = e.target.value;
+                        setCheckIn(newIn);
+                        if (newIn >= checkOut) {
+                          const d = new Date(newIn);
+                          d.setDate(d.getDate() + 2);
+                          setCheckOut(d.toISOString().split("T")[0]);
+                        }
+                      }}
+                      className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#384432]"
+                    />
+                    <span className="text-[10px] text-stone-400 block mt-0.5">Check-in at 2:00 PM</span>
+                  </div>
+
+                  {/* Check-out Date */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase block mb-1">
+                      Check-out Date
+                    </label>
+                    <input
+                      type="date"
+                      min={(() => {
+                        const d = new Date(checkIn || defaultCheckIn);
+                        d.setDate(d.getDate() + 1);
+                        return d.toISOString().split("T")[0];
+                      })()}
+                      value={checkOut}
+                      onChange={(e) => setCheckOut(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#384432]"
+                    />
+                    <span className="text-[10px] text-stone-400 block mt-0.5">Check-out at 11:00 AM</span>
+                  </div>
+
+                  {/* Guests */}
+                  <div>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase block mb-1">
+                      Guests
+                    </label>
+                    <select
+                      value={guests}
+                      onChange={(e) => setGuests(parseInt(e.target.value, 10))}
+                      className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#384432]"
+                    >
+                      {Array.from({ length: room.maxGuests }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          {n} {n === 1 ? "Guest" : "Guests"}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-stone-400 block mt-0.5">Max {room.maxGuests} Guests</span>
+                  </div>
                 </div>
-                <div className="p-2.5 bg-stone-50 rounded-lg border border-stone-200 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-stone-400 font-semibold uppercase block">Stay Duration</span>
-                  <strong className="text-stone-900 text-xs">{nights} {nights === 1 ? "Night" : "Nights"}</strong>
+
+                {/* Duration & Live Calculation Summary */}
+                <div className="pt-2.5 border-t border-stone-200/80 flex items-center justify-between text-[11px] text-stone-700 flex-wrap gap-2">
+                  <div>
+                    Stay: <strong>{nights} {nights === 1 ? "Night" : "Nights"}</strong> (Avg. ₹{ratePerNight.toLocaleString("en-IN")}/night)
+                  </div>
+                  <div>
+                    Base: <strong>₹{baseTariffTotal.toLocaleString("en-IN")}</strong> + {gstRatePercent}% GST (₹{gstAmount.toLocaleString("en-IN")}) = <strong>₹{grandTotal.toLocaleString("en-IN")}</strong>
+                  </div>
                 </div>
               </div>
+
+              {/* Availability Alert if not available */}
+              {!isAvailable && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <div>
+                    <strong>Dates Unavailable:</strong>{" "}
+                    {blackoutReason
+                      ? blackoutReason
+                      : `All keys for this room type are fully booked between ${checkIn} and ${checkOut}. Please adjust your dates or choose another room.`}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -387,11 +495,21 @@ export function BookingWizard({ user }: BookingWizardProps) {
 
             <button
               type="button"
+              disabled={!isAvailable || checkingAvailability}
               onClick={() => setStep(2)}
-              className="px-6 py-2.5 bg-[#384432] hover:bg-[#2c3627] text-white rounded-xl text-xs font-bold transition shadow flex items-center gap-2"
+              className="px-6 py-2.5 bg-[#384432] hover:bg-[#2c3627] text-white rounded-xl text-xs font-bold transition shadow flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Continue to Guest Details</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              {checkingAvailability ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Checking Allotment...</span>
+                </>
+              ) : (
+                <>
+                  <span>Continue to Guest Details</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
           </div>
         </div>

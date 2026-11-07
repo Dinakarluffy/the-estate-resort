@@ -11,8 +11,14 @@ import {
   checkUserExistingBooking,
   extendBookingStay,
 } from "./booking";
+import { atomicReleaseAllotment } from "./allotment";
 
 const prisma = new PrismaClient();
+
+async function cleanupTestBooking(booking: { id: string; roomTypeId: string; checkIn: string; checkOut: string }) {
+  await atomicReleaseAllotment(booking.roomTypeId, booking.checkIn, booking.checkOut, 1, prisma).catch(() => {});
+  await prisma.booking.delete({ where: { id: booking.id } }).catch(() => {});
+}
 
 describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
   let guestUserId: string;
@@ -84,7 +90,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       expect(booking.netTaxableAmount).toBe(booking.baseTariffTotal);
 
       // Clean up booking
-      await prisma.booking.delete({ where: { id: booking.id } });
+      await cleanupTestBooking(booking);
     });
 
     it("applies promo code COFFEE10 and decrements net taxable amount", async () => {
@@ -115,7 +121,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       expect(booking.netTaxableAmount).toBe(booking.baseTariffTotal - booking.discountAmount);
 
       // Clean up
-      await prisma.booking.delete({ where: { id: booking.id } });
+      await cleanupTestBooking(booking);
     });
 
     it("applies statutory 18% GST for Coffee Estate Luxury Suite (> ₹7,500/night)", async () => {
@@ -144,7 +150,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       expect(booking.totalNights).toBe(1);
 
       // Clean up
-      await prisma.booking.delete({ where: { id: booking.id } });
+      await cleanupTestBooking(booking);
     });
 
     it("throws error for missing guest name", async () => {
@@ -215,7 +221,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       expect(byNum?.bookingNumber).toBe(created.bookingNumber);
 
       // Clean up
-      await prisma.booking.delete({ where: { id: created.id } });
+      await cleanupTestBooking(created);
     });
   });
 
@@ -250,7 +256,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       await expect(cancelBooking(booking.id, prisma)).rejects.toThrow("already been cancelled");
 
       // Clean up
-      await prisma.booking.delete({ where: { id: booking.id } });
+      await cleanupTestBooking(booking);
     });
   });
 
@@ -321,7 +327,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       expect(noOverlap).toBeNull();
 
       // Clean up
-      await prisma.booking.delete({ where: { id: booking.id } });
+      await cleanupTestBooking(booking);
     });
   });
 
@@ -368,7 +374,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       expect(extensionResult.booking.grandTotal).toBeGreaterThan(initialGrandTotal);
 
       // Clean up
-      await prisma.booking.delete({ where: { id: initialBooking.id } });
+      await cleanupTestBooking({ ...initialBooking, checkOut: newCout });
     });
 
     it("rejects extension if requested new check-out date is not after current check-out", async () => {
@@ -399,7 +405,7 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
       ).rejects.toThrow("strictly after");
 
       // Clean up
-      await prisma.booking.delete({ where: { id: booking.id } });
+      await cleanupTestBooking(booking);
     });
   });
 });
