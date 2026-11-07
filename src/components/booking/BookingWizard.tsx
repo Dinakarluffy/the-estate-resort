@@ -62,7 +62,7 @@ export function BookingWizard({ user }: BookingWizardProps) {
   const [checkOut, setCheckOut] = useState(checkOutParam || defaultCheckOut);
   const [guests, setGuests] = useState(guestsParam ? parseInt(guestsParam, 10) : 2);
 
-  // Step 2: Guest Details (DPDP Act)
+  // Step 2: Guest Details
   const [guestName, setGuestName] = useState(user.name || "");
   const [guestEmail, setGuestEmail] = useState(user.email || "");
   const [guestPhone, setGuestPhone] = useState("+91 98765 43210");
@@ -515,7 +515,7 @@ export function BookingWizard({ user }: BookingWizardProps) {
         </div>
       )}
 
-      {/* STEP 2: Guest Details (DPDP Act 2023) */}
+      {/* STEP 2: Guest Details */}
       {step === 2 && (
         <div className="bg-white border border-[#ebded2] rounded-2xl p-6 shadow-sm space-y-6 animate-in fade-in duration-150">
           <div className="flex items-center justify-between pb-4 border-b border-stone-100">
@@ -525,7 +525,7 @@ export function BookingWizard({ user }: BookingWizardProps) {
             </div>
             <span className="text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>DPDP Act Compliant</span>
+              <span>Direct Booking Guarantee</span>
             </span>
           </div>
 
@@ -578,13 +578,13 @@ export function BookingWizard({ user }: BookingWizardProps) {
             </div>
           </div>
 
-          {/* DPDP Act 2023 Statutory Privacy Notice */}
+          {/* Guest Privacy & Front Desk ID Policy */}
           <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl text-xs text-stone-600 flex items-start gap-2.5">
             <Lock className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
             <div>
-              <strong className="text-stone-900">Digital Personal Data Protection (DPDP) Act 2023:</strong>
+              <strong className="text-stone-900">Direct Booking Privacy:</strong>
               <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
-                We only collect minimal PII necessary to execute your hotel stay. In compliance with Indian hospitality privacy regulations, no passport scans or identity documents are collected or stored on this website.
+                Your contact details are encrypted and strictly used for your reservation voucher. Government identity verification is performed in-person at the front desk upon check-in.
               </p>
             </div>
           </div>

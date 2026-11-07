@@ -135,7 +135,7 @@ export default async function RoomsPage() {
       {/* Footer */}
       <footer className="border-t border-[#ebded2] bg-white py-6 mt-12 text-center text-xs text-stone-500">
         <p>The Estate Resort • Chikkamagaluru, Karnataka • 76 Keys (64 Rooms + 12 Private Villas)</p>
-        <p className="text-[11px] text-stone-400 mt-1">DPDP Act 2023 Compliant • Indian Hotel GST Tier Engine (12% / 18%)</p>
+        <p className="text-[11px] text-stone-400 mt-1">Direct Booking Sanctuary • Statutory Indian Hotel GST Tier Engine (12% / 18%)</p>
       </footer>
     </div>
   );

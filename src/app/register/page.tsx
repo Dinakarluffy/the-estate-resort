@@ -170,11 +170,11 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* DPDP Act 2023 Notice */}
+          {/* Privacy Reassurance */}
           <div className="p-2.5 bg-stone-50 rounded-lg border border-stone-200 text-[11px] text-stone-500 flex items-start gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-stone-600 shrink-0 mt-0.5" />
             <span>
-              <strong>DPDP Act 2023:</strong> We only collect minimal contact details to process your bookings. No passport or identity documents are required online.
+              <strong>Direct Booking Privacy:</strong> We only collect basic contact details to confirm your stays. Identity verification is conducted in-person at check-in.
             </span>
           </div>
 

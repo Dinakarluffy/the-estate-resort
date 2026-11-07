@@ -130,7 +130,7 @@ export default async function MyBookingsPage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-[#ebded2]">
           <div>
             <span className="text-xs uppercase tracking-widest text-[#7e5241] font-bold block">
-              Guest Portal • DPDP Act Protected
+              Guest Reservation Portal
             </span>
             <h1 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 mt-0.5">
               My Reservation History

@@ -142,7 +142,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
             <div className="space-y-2 p-4 bg-stone-50 rounded-2xl border border-stone-200/80">
               <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block">
-                Guest Profile (DPDP Act)
+                Primary Guest Profile
               </span>
               <div className="font-bold text-sm text-stone-900">{booking.guestName}</div>
               <div className="text-stone-600 font-mono">{booking.guestEmail}</div>
@@ -319,7 +319,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
       {/* Footer */}
       <footer className="border-t border-[#ebded2] bg-white py-6 mt-12 text-center text-xs text-stone-500 print:hidden">
         <p>The Estate Resort • Chikkamagaluru, Karnataka • Official Direct Booking Voucher</p>
-        <p className="text-[11px] text-stone-400 mt-1">DPDP Act 2023 Compliant • Indian Hotel GST Tier Engine</p>
+        <p className="text-[11px] text-stone-400 mt-1">Verified Direct Booking Receipt • Statutory Indian Hotel GST Tier Engine</p>
       </footer>
     </div>
   );
