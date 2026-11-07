@@ -8,6 +8,8 @@ import {
   getUserBookings,
   getAllBookings,
   generateBookingNumber,
+  checkUserExistingBooking,
+  extendBookingStay,
 } from "./booking";
 
 const prisma = new PrismaClient();
@@ -259,6 +261,145 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
 
       const allBookings = await getAllBookings(undefined, prisma);
       expect(Array.isArray(allBookings)).toBe(true);
+    });
+  });
+
+  describe("checkUserExistingBooking", () => {
+    it("detects an existing active booking with overlapping dates", async () => {
+      const d1 = new Date();
+      d1.setDate(d1.getDate() + 30);
+      const d2 = new Date();
+      d2.setDate(d2.getDate() + 33);
+      const cin = d1.toISOString().split("T")[0];
+      const cout = d2.toISOString().split("T")[0];
+
+      const booking = await createBooking(
+        {
+          userId: guestUserId,
+          guestName: "Priya Sharma",
+          guestEmail: "priya@estate.com",
+          guestPhone: "+91 98765 43210",
+          roomTypeId: heritageRoomId,
+          checkIn: cin,
+          checkOut: cout,
+          paymentReference: "PAY-RZP-2026-909090",
+        },
+        prisma
+      );
+
+      // Same dates -> Should detect overlap
+      const existing = await checkUserExistingBooking(guestUserId, heritageRoomId, cin, cout, prisma);
+      expect(existing).not.toBeNull();
+      expect(existing?.id).toBe(booking.id);
+
+      // Overlapping intermediate dates -> Should detect overlap
+      const midDate = new Date();
+      midDate.setDate(midDate.getDate() + 31);
+      const midOut = new Date();
+      midOut.setDate(midOut.getDate() + 34);
+      const overlapMid = await checkUserExistingBooking(
+        guestUserId,
+        heritageRoomId,
+        midDate.toISOString().split("T")[0],
+        midOut.toISOString().split("T")[0],
+        prisma
+      );
+      expect(overlapMid).not.toBeNull();
+
+      // Completely different non-overlapping dates -> Should return null
+      const futureD1 = new Date();
+      futureD1.setDate(futureD1.getDate() + 40);
+      const futureD2 = new Date();
+      futureD2.setDate(futureD2.getDate() + 42);
+      const noOverlap = await checkUserExistingBooking(
+        guestUserId,
+        heritageRoomId,
+        futureD1.toISOString().split("T")[0],
+        futureD2.toISOString().split("T")[0],
+        prisma
+      );
+      expect(noOverlap).toBeNull();
+
+      // Clean up
+      await prisma.booking.delete({ where: { id: booking.id } });
+    });
+  });
+
+  describe("extendBookingStay", () => {
+    it("successfully extends stay by 1 day and charges pro-rated amount + GST", async () => {
+      const d1 = new Date();
+      d1.setDate(d1.getDate() + 35);
+      const d2 = new Date();
+      d2.setDate(d2.getDate() + 37);
+      const d3 = new Date();
+      d3.setDate(d3.getDate() + 38); // +1 day extension
+
+      const cin = d1.toISOString().split("T")[0];
+      const cout = d2.toISOString().split("T")[0];
+      const newCout = d3.toISOString().split("T")[0];
+
+      const initialBooking = await createBooking(
+        {
+          userId: guestUserId,
+          guestName: "Priya Sharma",
+          guestEmail: "priya@estate.com",
+          guestPhone: "+91 98765 43210",
+          roomTypeId: heritageRoomId,
+          checkIn: cin,
+          checkOut: cout,
+          paymentReference: "PAY-RZP-2026-INITIAL",
+        },
+        prisma
+      );
+
+      const initialGrandTotal = initialBooking.grandTotal;
+
+      const extensionResult = await extendBookingStay(
+        initialBooking.id,
+        newCout,
+        "PAY-RZP-2026-EXTEND1",
+        prisma
+      );
+
+      expect(extensionResult.additionalNights).toBe(1);
+      expect(extensionResult.additionalBaseTariff).toBe(6500); // Heritage room base price
+      expect(extensionResult.booking.checkOut).toBe(newCout);
+      expect(extensionResult.booking.totalNights).toBe(3);
+      expect(extensionResult.booking.grandTotal).toBeGreaterThan(initialGrandTotal);
+
+      // Clean up
+      await prisma.booking.delete({ where: { id: initialBooking.id } });
+    });
+
+    it("rejects extension if requested new check-out date is not after current check-out", async () => {
+      const d1 = new Date();
+      d1.setDate(d1.getDate() + 20);
+      const d2 = new Date();
+      d2.setDate(d2.getDate() + 22);
+
+      const cin = d1.toISOString().split("T")[0];
+      const cout = d2.toISOString().split("T")[0];
+
+      const booking = await createBooking(
+        {
+          userId: guestUserId,
+          guestName: "Priya Sharma",
+          guestEmail: "priya@estate.com",
+          guestPhone: "+91 98765 43210",
+          roomTypeId: heritageRoomId,
+          checkIn: cin,
+          checkOut: cout,
+          paymentReference: "PAY-RZP-2026-TEST",
+        },
+        prisma
+      );
+
+      await expect(
+        extendBookingStay(booking.id, cout, "PAY-FAIL", prisma)
+      ).rejects.toThrow("strictly after");
+
+      // Clean up
+      await prisma.booking.delete({ where: { id: booking.id } });
     });
   });
 });

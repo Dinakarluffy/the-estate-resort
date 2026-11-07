@@ -54,9 +54,12 @@ export function BookingWizard({ user }: BookingWizardProps) {
   const [loadingRoom, setLoadingRoom] = useState(true);
   const [room, setRoom] = useState<RoomTypeData | null>(null);
 
-  // Step 1: Stay Details
-  const [checkIn, setCheckIn] = useState(checkInParam || "");
-  const [checkOut, setCheckOut] = useState(checkOutParam || "");
+  // Step 1: Stay Details (Default: current date for check-in, checkout after 2 days)
+  const defaultCheckIn = new Date().toISOString().split("T")[0];
+  const defaultCheckOut = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  const [checkIn, setCheckIn] = useState(checkInParam || defaultCheckIn);
+  const [checkOut, setCheckOut] = useState(checkOutParam || defaultCheckOut);
   const [guests, setGuests] = useState(guestsParam ? parseInt(guestsParam, 10) : 2);
 
   // Step 2: Guest Details (DPDP Act)

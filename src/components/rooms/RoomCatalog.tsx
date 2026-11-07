@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Calendar,
@@ -21,6 +22,9 @@ import {
   Compass,
   Bed,
   Sparkles,
+  AlertTriangle,
+  Clock,
+  Printer,
 } from "lucide-react";
 
 interface DailyRate {
@@ -103,9 +107,17 @@ const PHOTO_CAPTIONS: Record<string, string[]> = {
 };
 
 function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn: string; checkOut: string; guests: number }) {
+  const router = useRouter();
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Active reservation detection & stay extension states
+  const [checkingExisting, setCheckingExisting] = useState(false);
+  const [existingBooking, setExistingBooking] = useState<any | null>(null);
+  const [newCheckOut, setNewCheckOut] = useState("");
+  const [extending, setExtending] = useState(false);
+  const [extendMessage, setExtendMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -150,6 +162,93 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showPopup, photos.length]);
+
+  // Click "Book Direct Now": Check for existing active booking first
+  const handleBookClick = async () => {
+    setCheckingExisting(true);
+    setExtendMessage(null);
+    try {
+      const res = await fetch("/api/bookings/check-existing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomTypeId: room.roomTypeId,
+          checkIn,
+          checkOut,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.hasExistingBooking && data.existingBooking) {
+        setExistingBooking(data.existingBooking);
+        // Default newCheckOut to existingBooking.checkOut + 1 day
+        const curOut = new Date(data.existingBooking.checkOut);
+        curOut.setDate(curOut.getDate() + 1);
+        setNewCheckOut(curOut.toISOString().split("T")[0]);
+      } else {
+        router.push(
+          `/book?roomTypeId=${room.roomTypeId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
+        );
+      }
+    } catch {
+      router.push(
+        `/book?roomTypeId=${room.roomTypeId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
+      );
+    } finally {
+      setCheckingExisting(false);
+    }
+  };
+
+  // Handle stay extension
+  const handleExtendStay = async () => {
+    if (!existingBooking || !newCheckOut) return;
+    setExtending(true);
+    setExtendMessage(null);
+
+    try {
+      const res = await fetch("/api/bookings/extend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: existingBooking.id,
+          newCheckOut,
+          paymentMethod: "CARD",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setExtendMessage({ type: "error", text: data.error || "Extension failed" });
+      } else {
+        setExtendMessage({
+          type: "success",
+          text: `Stay successfully extended! New Check-out: ${newCheckOut} (11:00 AM). Redirecting to your updated receipt...`,
+        });
+        setTimeout(() => {
+          router.push(`/confirmation/${existingBooking.bookingNumber}`);
+        }, 1500);
+      }
+    } catch (err: any) {
+      setExtendMessage({ type: "error", text: err.message || "Failed to extend stay" });
+    } finally {
+      setExtending(false);
+    }
+  };
+
+  // Calculate extension difference
+  let extNights = 0;
+  let extBase = 0;
+  let extGst = 0;
+  let extGrandTotal = 0;
+  if (existingBooking && newCheckOut && newCheckOut > existingBooking.checkOut) {
+    const dStart = new Date(existingBooking.checkOut);
+    const dEnd = new Date(newCheckOut);
+    const diffDays = Math.ceil((dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60 * 24));
+    extNights = diffDays > 0 ? diffDays : 0;
+    extBase = extNights * room.pricing.ratePerNight;
+    extGst = Math.round(((extBase * room.pricing.gstRatePercent) / 100) * 100) / 100;
+    extGrandTotal = extBase + extGst;
+  }
 
   const hasBlackout = !room.isAvailable && room.blackoutReason;
 
@@ -350,13 +449,24 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
 
           <div>
             {room.isAvailable ? (
-              <Link
-                href={`/book?roomTypeId=${room.roomTypeId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-bold transition shadow hover:shadow-md"
+              <button
+                type="button"
+                disabled={checkingExisting}
+                onClick={handleBookClick}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-bold transition shadow hover:shadow-md disabled:opacity-50"
               >
-                <span>Book Direct Now</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                {checkingExisting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Checking...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Book Direct Now</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
             ) : (
               <button
                 disabled
@@ -368,6 +478,174 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
           </div>
         </div>
       </div>
+
+      {/* Active Reservation & Stay Extension Modal */}
+      {mounted && existingBooking && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-stone-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setExistingBooking(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-stone-200 text-left space-y-5 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-stone-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-serif font-bold text-stone-900">
+                    Active Reservation Detected
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    You already have an active booking for this room on overlapping dates
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setExistingBooking(null)}
+                className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Current Booking Summary Card */}
+            <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-900">
+              <div className="flex items-center justify-between">
+                <span className="font-bold">{existingBooking.roomType.name}</span>
+                <span className="font-mono font-bold bg-amber-200/80 px-2 py-0.5 rounded text-[11px]">
+                  {existingBooking.bookingNumber}
+                </span>
+              </div>
+              <div className="text-[11px] text-amber-800 flex items-center justify-between">
+                <span>Check-in: {existingBooking.checkIn} (2:00 PM)</span>
+                <span>Check-out: {existingBooking.checkOut} (11:00 AM)</span>
+              </div>
+              <div className="text-[11px] text-amber-800 flex items-center justify-between border-t border-amber-200/60 pt-1.5">
+                <span>Total Paid: ₹{existingBooking.grandTotal.toLocaleString("en-IN")} (PAID)</span>
+                <span className="font-semibold text-emerald-800">Confirmed & Guaranteed</span>
+              </div>
+            </div>
+
+            {/* Extension Feedback Banner */}
+            {extendMessage && (
+              <div
+                className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                  extendMessage.type === "success"
+                    ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+                    : "bg-red-50 border border-red-200 text-red-800"
+                }`}
+              >
+                {extendMessage.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                )}
+                <span>{extendMessage.text}</span>
+              </div>
+            )}
+
+            {/* Options */}
+            <div className="space-y-4">
+              {/* Option 1: Extend Stay */}
+              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-xs text-stone-900">
+                  <Clock className="w-4 h-4 text-emerald-700" />
+                  <span>Option 1: Extend Your Stay Check-out Date</span>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  Want to stay longer? Pick a later check-out date. The system automatically checks room allotment and calculates the pro-rated cost.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3 items-end">
+                  <div className="w-full sm:flex-1">
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
+                      New Check-out Date
+                    </label>
+                    <input
+                      type="date"
+                      value={newCheckOut}
+                      min={(() => {
+                        const d = new Date(existingBooking.checkOut);
+                        d.setDate(d.getDate() + 1);
+                        return d.toISOString().split("T")[0];
+                      })()}
+                      onChange={(e) => setNewCheckOut(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-medium focus:ring-2 focus:ring-[#384432] focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={extending || !newCheckOut || newCheckOut <= existingBooking.checkOut}
+                    onClick={handleExtendStay}
+                    className="w-full sm:w-auto px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
+                  >
+                    {extending ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Extending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Pay {extGrandTotal > 0 ? `₹${extGrandTotal.toLocaleString("en-IN")}` : "Difference"} & Extend</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {extNights > 0 && (
+                  <div className="text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 flex items-center justify-between">
+                    <span>Extending by +{extNights} {extNights === 1 ? "Night" : "Nights"}</span>
+                    <span>Pro-rated: ₹{extBase.toLocaleString("en-IN")} + {room.pricing.gstRatePercent}% GST (₹{extGst.toLocaleString("en-IN")}) = <strong>₹{extGrandTotal.toLocaleString("en-IN")}</strong></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Option 2: Book as an Additional Room */}
+              <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+                <div>
+                  <strong className="text-stone-900 block">Option 2: Book an Additional Room</strong>
+                  <span className="text-[11px] text-stone-500">Need a second room for travelling friends or family?</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExistingBooking(null);
+                    router.push(
+                      `/book?roomTypeId=${room.roomTypeId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
+                    );
+                  }}
+                  className="px-3 py-1.5 bg-[#384432] hover:bg-[#283224] text-white rounded-lg text-[11px] font-semibold transition shrink-0"
+                >
+                  Book Extra Room →
+                </button>
+              </div>
+
+              {/* Option 3: View Existing Receipt */}
+              <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+                <div>
+                  <strong className="text-stone-900 block">Option 3: View Existing Receipt</strong>
+                  <span className="text-[11px] text-stone-500">Print or download your official GST tax invoice voucher</span>
+                </div>
+                <Link
+                  href={`/confirmation/${existingBooking.bookingNumber}`}
+                  className="px-3 py-1.5 border border-stone-300 hover:bg-stone-100 text-stone-700 rounded-lg text-[11px] font-semibold transition shrink-0"
+                >
+                  View Receipt
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Modern Pop-Up Photo Modal (Single Image with <, > arrows and X button) */}
       {mounted && showPopup && createPortal(
@@ -476,10 +754,9 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
 export function RoomCatalog() {
   const getDefaultDates = () => {
     const today = new Date();
-    const d1 = new Date(today);
-    d1.setDate(today.getDate() + 1);
+    const d1 = new Date(today); // current date (today)
     const d2 = new Date(today);
-    d2.setDate(today.getDate() + 3);
+    d2.setDate(today.getDate() + 2); // default checkout: after 2 days (2-night stay)
 
     return {
       checkIn: d1.toISOString().split("T")[0],

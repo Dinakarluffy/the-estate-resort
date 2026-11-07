@@ -1,5 +1,5 @@
 import { PrismaClient, Booking } from "@prisma/client";
-import { checkRoomAvailability, atomicReserveAllotment, atomicReleaseAllotment } from "./allotment";
+import { checkRoomAvailability, atomicReserveAllotment, atomicReleaseAllotment, getDateRangeArray } from "./allotment";
 import { calculateTariffGST } from "./gst";
 import { validateAndApplyPromo, incrementPromoUsage } from "./promo";
 
@@ -290,4 +290,134 @@ export async function getAllBookings(
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/**
+ * Checks if a guest already has an active CONFIRMED booking overlapping these dates for this room.
+ * Overlap formula: existing.checkIn < newCheckOut AND existing.checkOut > newCheckIn
+ */
+export async function checkUserExistingBooking(
+  userId: string,
+  roomTypeId: string,
+  checkIn: string,
+  checkOut: string,
+  dbClient: PrismaClient = prisma
+): Promise<BookingDetails | null> {
+  return dbClient.booking.findFirst({
+    where: {
+      userId,
+      roomTypeId,
+      status: "CONFIRMED",
+      checkIn: { lt: checkOut },
+      checkOut: { gt: checkIn },
+    },
+    include: {
+      roomType: {
+        select: {
+          name: true,
+          slug: true,
+          basePrice: true,
+          photos: true,
+        },
+      },
+    },
+  });
+}
+
+export interface ExtendBookingResult {
+  booking: BookingDetails;
+  additionalNights: number;
+  additionalBaseTariff: number;
+  additionalGstAmount: number;
+  additionalGrandTotal: number;
+  paymentReference: string;
+}
+
+/**
+ * Real-world stay extension engine:
+ * 1. Checks if subsequent extension dates have available website allotment
+ * 2. If room is occupied / sold out, rejects extension with clear message
+ * 3. If available, atomically reserves extension dates
+ * 4. Calculates additional pro-rated tariff + statutory GST
+ * 5. Updates the booking stay duration and invoice totals
+ */
+export async function extendBookingStay(
+  bookingId: string,
+  newCheckOut: string,
+  paymentReference: string,
+  dbClient: PrismaClient = prisma
+): Promise<ExtendBookingResult> {
+  const booking = await dbClient.booking.findUnique({
+    where: { id: bookingId },
+    include: { roomType: true },
+  });
+
+  if (!booking) {
+    throw new Error(`Booking ${bookingId} not found`);
+  }
+
+  if (booking.status !== "CONFIRMED") {
+    throw new Error("Cannot extend a booking that is not confirmed");
+  }
+
+  if (newCheckOut <= booking.checkOut) {
+    throw new Error(`New check-out date (${newCheckOut}) must be strictly after current check-out date (${booking.checkOut})`);
+  }
+
+  // Calculate additional nights
+  const additionalDates = getDateRangeArray(booking.checkOut, newCheckOut);
+  const additionalNights = additionalDates.length;
+
+  // 1. Verify availability on requested extension dates
+  const availability = await checkRoomAvailability(booking.roomTypeId, booking.checkOut, newCheckOut, dbClient);
+
+  if (!availability.isAvailable) {
+    throw new Error(
+      availability.blackoutReason
+        ? `Cannot extend stay: Date blocked (${availability.blackoutReason})`
+        : `Cannot extend stay: All rooms of this type are fully occupied on the requested extension dates (${booking.checkOut} to ${newCheckOut}).`
+    );
+  }
+
+  // 2. Compute pro-rated tariff and statutory GST for additional nights
+  const additionalPricing = calculateTariffGST(
+    booking.roomType.basePrice,
+    additionalNights,
+    0
+  );
+
+  // 3. Atomically reserve inventory for the extended dates
+  await atomicReserveAllotment(booking.roomTypeId, booking.checkOut, newCheckOut, 1, dbClient);
+
+  // 4. Update booking record
+  const updated = await dbClient.booking.update({
+    where: { id: bookingId },
+    data: {
+      checkOut: newCheckOut,
+      totalNights: booking.totalNights + additionalNights,
+      baseTariffTotal: booking.baseTariffTotal + additionalPricing.baseTotal,
+      netTaxableAmount: booking.netTaxableAmount + additionalPricing.netTaxableAmount,
+      gstAmount: booking.gstAmount + additionalPricing.gstAmount,
+      grandTotal: booking.grandTotal + additionalPricing.grandTotal,
+    },
+    include: {
+      roomType: {
+        select: {
+          name: true,
+          slug: true,
+          basePrice: true,
+          photos: true,
+        },
+      },
+    },
+  });
+
+  return {
+    booking: updated,
+    additionalNights,
+    additionalBaseTariff: additionalPricing.baseTotal,
+    additionalGstAmount: additionalPricing.gstAmount,
+    additionalGrandTotal: additionalPricing.grandTotal,
+    paymentReference,
+  };
 }
