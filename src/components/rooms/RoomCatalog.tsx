@@ -559,73 +559,120 @@ function RoomCard({ room, checkIn, checkOut, guests }: { room: RoomData; checkIn
                   <span>Option 1: Extend Your Stay Check-out Date</span>
                 </div>
                 <p className="text-[11px] text-stone-600 leading-relaxed">
-                  Want to stay longer? Pick a later check-out date. The system automatically checks room allotment and calculates the pro-rated cost.
+                  Stay extra nights in the same room. The system checks website allotment for your extension dates and calculates the pro-rated nightly cost.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3 items-end">
-                  <div className="w-full sm:flex-1">
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
-                      New Check-out Date
-                    </label>
-                    <input
-                      type="date"
-                      value={newCheckOut}
-                      min={(() => {
-                        const d = new Date(existingBooking.checkOut);
-                        d.setDate(d.getDate() + 1);
-                        return d.toISOString().split("T")[0];
-                      })()}
-                      onChange={(e) => setNewCheckOut(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-medium focus:ring-2 focus:ring-[#384432] focus:outline-none"
-                    />
+                <div className="space-y-2">
+                  <div className="flex flex-col sm:flex-row gap-3 items-end">
+                    <div className="w-full sm:flex-1">
+                      <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
+                        Select New Check-out Date (Departure at 11:00 AM)
+                      </label>
+                      <input
+                        type="date"
+                        value={newCheckOut}
+                        min={(() => {
+                          const d = new Date(existingBooking.checkOut);
+                          d.setDate(d.getDate() + 1);
+                          return d.toISOString().split("T")[0];
+                        })()}
+                        onChange={(e) => setNewCheckOut(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-medium focus:ring-2 focus:ring-[#384432] focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={extending || !newCheckOut || newCheckOut <= existingBooking.checkOut}
+                      onClick={handleExtendStay}
+                      className="w-full sm:w-auto px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 shadow-sm"
+                    >
+                      {extending ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Checking & Extending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Pay {extGrandTotal > 0 ? `₹${extGrandTotal.toLocaleString("en-IN")}` : "Difference"} & Extend Stay</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={extending || !newCheckOut || newCheckOut <= existingBooking.checkOut}
-                    onClick={handleExtendStay}
-                    className="w-full sm:w-auto px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
-                  >
-                    {extending ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Extending...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Pay {extGrandTotal > 0 ? `₹${extGrandTotal.toLocaleString("en-IN")}` : "Difference"} & Extend</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
+                  {/* Timing & Duration Clarification Box */}
+                  {newCheckOut && newCheckOut > existingBooking.checkOut && (
+                    <div className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-lg text-[11px] text-emerald-900 space-y-1">
+                      <div className="flex items-center justify-between font-semibold">
+                        <span>New Departure: {newCheckOut} at 11:00 AM</span>
+                        <span>+{extNights} {extNights === 1 ? "Night" : "Nights"} Added</span>
+                      </div>
+                      <div className="text-[10px] text-emerald-800">
+                        Stay Duration: <strong>{existingBooking.checkIn} (2:00 PM)</strong> to <strong>{newCheckOut} (11:00 AM)</strong> • Total {(existingBooking.totalNights || 2) + extNights} Nights
+                      </div>
+                      <div className="text-[10px] text-emerald-700 pt-0.5 border-t border-emerald-200/60 flex items-center justify-between">
+                        <span>Pro-rated Tariff: ₹{extBase.toLocaleString("en-IN")} + {room.pricing.gstRatePercent}% GST (₹{extGst.toLocaleString("en-IN")})</span>
+                        <span className="font-bold">Total to Pay: ₹{extGrandTotal.toLocaleString("en-IN")}</span>
+                      </div>
+                      <div className="text-[9px] text-stone-500 italic">
+                        ℹ️ Hotel Check-out is 11:00 AM (Housekeeping window 11:00 AM - 2:00 PM before next check-in at 2:00 PM).
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                {extNights > 0 && (
-                  <div className="text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 flex items-center justify-between">
-                    <span>Extending by +{extNights} {extNights === 1 ? "Night" : "Nights"}</span>
-                    <span>Pro-rated: ₹{extBase.toLocaleString("en-IN")} + {room.pricing.gstRatePercent}% GST (₹{extGst.toLocaleString("en-IN")}) = <strong>₹{extGrandTotal.toLocaleString("en-IN")}</strong></span>
-                  </div>
-                )}
               </div>
 
-              {/* Option 2: Book as an Additional Room */}
-              <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs">
-                <div>
-                  <strong className="text-stone-900 block">Option 2: Book an Additional Room</strong>
-                  <span className="text-[11px] text-stone-500">Need a second room for travelling friends or family?</span>
+              {/* Option 2: Book Another Room / Extra Room */}
+              <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <strong className="text-stone-900 block">Option 2: Book Another Room</strong>
+                    <span className="text-[11px] text-stone-500">
+                      Explore different room categories or reserve a 2nd room of this type
+                    </span>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExistingBooking(null);
-                    router.push(
-                      `/book?roomTypeId=${room.roomTypeId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
-                    );
-                  }}
-                  className="px-3 py-1.5 bg-[#384432] hover:bg-[#283224] text-white rounded-lg text-[11px] font-semibold transition shrink-0"
-                >
-                  Book Extra Room →
-                </button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-stone-200/60">
+                  {/* Sub-choice A: Stay on /rooms and browse other room types */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExistingBooking(null);
+                      // Scroll to catalog section
+                      const catalogEl = document.getElementById("room-catalog-list");
+                      if (catalogEl) {
+                        catalogEl.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                    className="px-3 py-2 bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 rounded-lg text-[11px] font-semibold transition text-left flex items-center justify-between group"
+                  >
+                    <span>
+                      <span className="block font-bold">Browse Other Room Types</span>
+                      <span className="text-[10px] text-stone-500 font-normal">View Luxury Suite or Pool Villa</span>
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 transition" />
+                  </button>
+
+                  {/* Sub-choice B: Book a 2nd key of this same room */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExistingBooking(null);
+                      router.push(
+                        `/book?roomTypeId=${room.roomTypeId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
+                      );
+                    }}
+                    className="px-3 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-lg text-[11px] font-semibold transition text-left flex items-center justify-between"
+                  >
+                    <span>
+                      <span className="block font-bold">Book 2nd Key of This Room</span>
+                      <span className="text-[10px] text-stone-300 font-normal">For visiting family/friends</span>
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-stone-300" />
+                  </button>
+                </div>
               </div>
 
               {/* Option 3: View Existing Receipt */}
@@ -901,7 +948,7 @@ export function RoomCatalog() {
       )}
 
       {/* Rooms List */}
-      <div className="space-y-6">
+      <div id="room-catalog-list" className="space-y-6 scroll-mt-6">
         {loading ? (
           <div className="py-20 text-center space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-[#384432] mx-auto" />
