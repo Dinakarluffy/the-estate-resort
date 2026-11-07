@@ -31,6 +31,12 @@ export default async function HomePage() {
           </Link>
 
           <nav className="flex items-center gap-3">
+            <Link
+              href="/rooms"
+              className="text-xs font-semibold text-[#384432] hover:text-[#283224] transition px-2.5 py-1.5 rounded-lg bg-stone-100/80 hover:bg-stone-200/80"
+            >
+              Rooms & Villas
+            </Link>
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f5efe8] rounded-full border border-[#ebded2] text-xs">
@@ -136,6 +142,12 @@ export default async function HomePage() {
             </p>
             <div className="pt-2 flex flex-wrap gap-3">
               <Link
+                href="/rooms"
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-sm rounded-lg shadow transition"
+              >
+                Browse Rooms & Live Availability →
+              </Link>
+              <Link
                 href="/login"
                 className="px-5 py-2.5 bg-white text-[#2f392b] font-bold text-sm rounded-lg shadow hover:bg-stone-100 transition"
               >
@@ -145,7 +157,7 @@ export default async function HomePage() {
                 href="/staff/dashboard"
                 className="px-5 py-2.5 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold text-sm rounded-lg transition"
               >
-                View Staff Enquiry Inbox →
+                Staff Enquiry Inbox
               </Link>
             </div>
           </div>
@@ -159,10 +171,23 @@ export default async function HomePage() {
             </div>
             <h3 className="font-bold text-base text-stone-900 mb-1">Phase 1: Roles & Auth</h3>
             <p className="text-xs text-stone-600 leading-relaxed mb-4">
-              Secure role-based access control with Guest, Reservations Staff, and General Manager hierarchy. 11 automated unit tests verifying bcrypt and JWT tokens.
+              Secure role-based access control with Guest, Reservations Staff, and General Manager hierarchy. 22 automated tests verifying bcrypt, JWT, and peer GM protection.
             </p>
             <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
               <CheckCircle2 className="w-3.5 h-3.5" /> Complete & Tested
+            </span>
+          </div>
+
+          <div className="bg-white border border-[#ebded2] rounded-xl p-6 shadow-sm">
+            <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center mb-4">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <h3 className="font-bold text-base text-stone-900 mb-1">Phase 2: Allotment & GST</h3>
+            <p className="text-xs text-stone-600 leading-relaxed mb-4">
+              Atomic transaction inventory reservation (prevents overbooking agency stock), statutory Indian Hotel GST slabs (12% and 18%), and promo code engine.
+            </p>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Complete (30 Tests)
             </span>
           </div>
 
@@ -176,19 +201,6 @@ export default async function HomePage() {
             </p>
             <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
               <CheckCircle2 className="w-3.5 h-3.5" /> Model Live & Operational
-            </span>
-          </div>
-
-          <div className="bg-white border border-[#ebded2] rounded-xl p-6 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center mb-4">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-stone-900 mb-1">Next: Allotment & GST</h3>
-            <p className="text-xs text-stone-600 leading-relaxed mb-4">
-              Phase 2: Atomic transactions for zero-overbooking allotment control, date search, and statutory Indian hotel GST slabs (12% and 18%).
-            </p>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded">
-              Ready for Phase 2
             </span>
           </div>
         </div>
