@@ -18,6 +18,7 @@ import {
   Tag,
 } from "lucide-react";
 import { SignOutButton } from "@/components/SignOutButton";
+import { GuestBookingsList, BookingItem } from "@/components/bookings/GuestBookingsList";
 
 export const metadata = {
   title: "My Reservations | The Estate Chikkamagaluru",
@@ -33,9 +34,10 @@ export default async function MyBookingsPage() {
     redirect("/login?redirect=/my-bookings");
   }
 
+  const todayStr = new Date().toISOString().split("T")[0];
   const rawBookings = await getUserBookings(user.userId);
 
-  const bookings = rawBookings.map((b) => {
+  const bookings: BookingItem[] = rawBookings.map((b) => {
     let photos: string[] = ["/images/rooms/heritage-1.jpg"];
     try {
       if (b.roomType && (b.roomType as any).photos) {
@@ -44,7 +46,27 @@ export default async function MyBookingsPage() {
     } catch {}
 
     return {
-      ...b,
+      id: b.id,
+      bookingNumber: b.bookingNumber,
+      checkIn: b.checkIn,
+      checkOut: b.checkOut,
+      totalNights: b.totalNights,
+      guestName: b.guestName,
+      guestEmail: b.guestEmail,
+      grandTotal: b.grandTotal,
+      netTaxableAmount: b.netTaxableAmount,
+      gstAmount: b.gstAmount,
+      gstRatePercent: b.gstRatePercent,
+      status: b.status,
+      paymentStatus: b.paymentStatus,
+      promoCode: b.promoCode,
+      createdAt: b.createdAt.toISOString(),
+      roomType: {
+        id: b.roomTypeId,
+        name: b.roomType.name,
+        slug: b.roomType.slug,
+        basePrice: b.roomType.basePrice,
+      },
       roomPhotos: photos,
     };
   });
@@ -151,160 +173,7 @@ export default async function MyBookingsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between text-xs text-stone-500 px-1">
-              <span>Showing {bookings.length} {bookings.length === 1 ? "reservation" : "reservations"}</span>
-              <span className="flex items-center gap-1.5 text-emerald-800 font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Instant Confirmation & Real-Time Allotment</span>
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5">
-              {bookings.map((booking, idx) => {
-                const isConfirmed = booking.status === "CONFIRMED";
-                const isCancelled = booking.status === "CANCELLED";
-
-                return (
-                  <div
-                    key={booking.id}
-                    className="bg-white border border-[#ebded2] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col md:flex-row group"
-                  >
-                    {/* Room Thumbnail Photo */}
-                    <div className="md:w-72 h-48 md:h-auto min-h-[190px] relative bg-stone-900 overflow-hidden shrink-0">
-                      <img
-                        src={booking.roomPhotos[0]}
-                        alt={booking.roomType.name}
-                        className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none" />
-
-                      {/* Status Badge Over Image */}
-                      <div className="absolute top-3 left-3">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm backdrop-blur-sm ${
-                            isConfirmed
-                              ? "bg-emerald-700/90 text-white"
-                              : "bg-stone-800/90 text-stone-200"
-                          }`}
-                        >
-                          {booking.status}
-                        </span>
-                      </div>
-
-                      {/* Room Name Overlay */}
-                      <div className="absolute bottom-3 left-3 right-3 text-white">
-                        <span className="text-[10px] uppercase font-bold text-amber-300 block">
-                          Stay #{idx + 1}
-                        </span>
-                        <h4 className="text-sm font-serif font-bold truncate">
-                          {booking.roomType.name}
-                        </h4>
-                      </div>
-                    </div>
-
-                    {/* Booking Information Details */}
-                    <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                      {/* Top Bar: Booking ID & Date Created */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-stone-100 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-stone-400 font-medium">Booking Reference:</span>
-                          <span className="font-mono font-bold text-[#384432] bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200 text-xs">
-                            {booking.bookingNumber}
-                          </span>
-                        </div>
-
-                        <div className="text-[11px] text-stone-400 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Booked on {new Date(booking.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}</span>
-                        </div>
-                      </div>
-
-                      {/* Middle: Stay Schedule & Breakdown */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        {/* Check-in */}
-                        <div className="p-2.5 bg-stone-50 rounded-xl border border-stone-200/80">
-                          <span className="text-[10px] text-stone-400 font-bold uppercase block">
-                            Check-in
-                          </span>
-                          <strong className="text-stone-900 text-xs block mt-0.5">
-                            {booking.checkIn}
-                          </strong>
-                          <span className="text-[10px] text-stone-500">2:00 PM Afternoon</span>
-                        </div>
-
-                        {/* Check-out */}
-                        <div className="p-2.5 bg-stone-50 rounded-xl border border-stone-200/80">
-                          <span className="text-[10px] text-stone-400 font-bold uppercase block">
-                            Check-out
-                          </span>
-                          <strong className="text-stone-900 text-xs block mt-0.5">
-                            {booking.checkOut}
-                          </strong>
-                          <span className="text-[10px] text-stone-500">11:00 AM Departure</span>
-                        </div>
-
-                        {/* Duration & Guests */}
-                        <div className="p-2.5 bg-stone-50 rounded-xl border border-stone-200/80">
-                          <span className="text-[10px] text-stone-400 font-bold uppercase block">
-                            Duration & Guest
-                          </span>
-                          <strong className="text-stone-900 text-xs block mt-0.5">
-                            {booking.totalNights} {booking.totalNights === 1 ? "Night" : "Nights"} Stay
-                          </strong>
-                          <span className="text-[10px] text-stone-500 truncate block">
-                            {booking.guestName}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Bottom Bar: Financials & Action Buttons */}
-                      <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-stone-500">Amount Paid:</span>
-                            <span className="font-serif font-bold text-lg text-stone-900">
-                              ₹{booking.grandTotal.toLocaleString("en-IN")}
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                              {booking.paymentStatus}
-                            </span>
-                            {booking.promoCode && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 flex items-center gap-1">
-                                <Tag className="w-2.5 h-2.5" />
-                                <span>{booking.promoCode} applied</span>
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-stone-400">
-                            Statutory Invoice: Net ₹{booking.netTaxableAmount.toLocaleString("en-IN")} + {booking.gstRatePercent}% GST (₹{booking.gstAmount.toLocaleString("en-IN")}) • SAC 996311
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/confirmation/${booking.bookingNumber}`}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-semibold transition"
-                          >
-                            <Printer className="w-3.5 h-3.5 text-stone-600" />
-                            <span>View Tax Invoice</span>
-                          </Link>
-
-                          <Link
-                            href="/rooms"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-semibold transition shadow-sm"
-                          >
-                            <span>Manage / Extend</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <GuestBookingsList initialBookings={bookings} todayStr={todayStr} />
         )}
       </main>
     </div>
