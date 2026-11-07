@@ -32,6 +32,7 @@ export interface RoomAvailabilityResult {
   dailyRates: DailyRateAndAllotment[];
   pricing: GSTBreakdown;
   blackoutReason?: string;
+  description: string;
   photos: string[];
   amenities: string[];
 }
@@ -174,6 +175,7 @@ export async function checkRoomAvailability(
     dailyRates,
     pricing,
     blackoutReason,
+    description: roomType.description,
     photos,
     amenities,
   };

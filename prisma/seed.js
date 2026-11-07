@@ -123,8 +123,9 @@ async function main() {
       defaultAllotment: 8,
       amenities: JSON.stringify(['King Bed', 'Coffee Balcony', 'Wi-Fi', 'Artisanal Coffee Bar', 'En-suite Bath']),
       photos: JSON.stringify([
-        'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80',
+        '/images/rooms/heritage-1.jpg',
+        '/images/rooms/heritage-2.jpg',
+        '/images/rooms/heritage-3.jpg',
       ]),
     },
     {
@@ -137,8 +138,9 @@ async function main() {
       defaultAllotment: 6,
       amenities: JSON.stringify(['Panoramic Hill View', 'Living Lounge', 'Fireplace', 'Bathtub', 'High-Speed Wi-Fi', 'Breakfast Included']),
       photos: JSON.stringify([
-        'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80',
+        '/images/rooms/suite-1.jpg',
+        '/images/rooms/suite-2.jpg',
+        '/images/rooms/suite-3.jpg',
       ]),
     },
     {
@@ -151,8 +153,9 @@ async function main() {
       defaultAllotment: 3,
       amenities: JSON.stringify(['Private Plunge Pool', 'Sun Deck', 'Butler Service', 'Open Sky Shower', 'Complimentary High Tea', 'All Meals Included']),
       photos: JSON.stringify([
-        'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80',
-        'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1200&q=80',
+        '/images/rooms/villa-1.jpg',
+        '/images/rooms/villa-2.jpg',
+        '/images/rooms/villa-3.jpg',
       ]),
     },
   ];
