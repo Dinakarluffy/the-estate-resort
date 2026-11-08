@@ -79,10 +79,14 @@ export async function getRatesAndAllotmentsMatrix(
     prisma.blackoutDate.findMany({
       where: {
         date: { gte: start, lte: end },
-        OR: [
-          { roomTypeId: targetRoomTypeId ? targetRoomTypeId : undefined },
-          { roomTypeId: null }, // resort-wide
-        ],
+        ...(targetRoomTypeId
+          ? {
+              OR: [
+                { roomTypeId: targetRoomTypeId },
+                { roomTypeId: null },
+              ],
+            }
+          : {}),
       },
     }),
   ]);
@@ -118,11 +122,11 @@ export async function getRatesAndAllotmentsMatrix(
       const alt = allotmentMap.get(`${rt.id}_${d}`);
       const websiteAllotment = alt ? alt.websiteAllotment : rt.defaultAllotment;
       const bookedCount = alt ? alt.bookedCount : 0;
-      const availableKeys = Math.max(0, websiteAllotment - bookedCount);
-
       const specificBlackout = blackoutMap.get(`${rt.id}_${d}`);
       const resortBlackout = blackoutMap.get(`RESORT_${d}`);
       const activeBlackout = specificBlackout || resortBlackout;
+      const isBlackout = !!activeBlackout;
+      const availableKeys = isBlackout ? 0 : Math.max(0, websiteAllotment - bookedCount);
 
       return {
         date: d,
@@ -131,7 +135,7 @@ export async function getRatesAndAllotmentsMatrix(
         websiteAllotment,
         bookedCount,
         availableKeys,
-        isBlackout: !!activeBlackout,
+        isBlackout,
         blackoutReason: activeBlackout?.reason || null,
         blackoutId: activeBlackout?.id || null,
       };

@@ -725,15 +725,21 @@ export function RateAllotmentManager() {
 
                           {/* Available Direct */}
                           <td className="py-3 px-4">
-                            <strong
-                              className={`font-mono text-sm ${
-                                day.availableKeys === 0
-                                  ? "text-red-600 font-bold"
-                                  : "text-emerald-700"
-                              }`}
-                            >
-                              {day.availableKeys} Keys Free
-                            </strong>
+                            {day.isBlackout ? (
+                              <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-red-700 bg-red-100 px-2.5 py-1 rounded-full border border-red-200 shadow-2xs">
+                                0 Keys (Blocked)
+                              </span>
+                            ) : (
+                              <strong
+                                className={`font-mono text-sm ${
+                                  day.availableKeys === 0
+                                    ? "text-red-600 font-bold"
+                                    : "text-emerald-700"
+                                }`}
+                              >
+                                {day.availableKeys} Keys Free
+                              </strong>
+                            )}
                           </td>
 
                           {/* Blackout Actions (Triggering Custom Styled Modal) */}
