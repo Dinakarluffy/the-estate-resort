@@ -578,5 +578,13 @@ The platform was built with a strict **hospitality-first architecture** conformi
    * Handles the edge case where guest enquiries arrive via Web form or forwarded email without a mobile number.
    * If staff clicks *"Approve & WhatsApp (Add #)"* or *"Call Guest (Enter #)"*, the system displays a luxury in-app alert modal: *"⚠️ No Phone Number on Record. Please enter the guest's phone number to approve and dispatch via WhatsApp or make a direct phone call."*
    * Saves the phone number to the enquiry in the database (`updateEnquiryPhone`) and seamlessly launches WhatsApp Web / phone dialer without breaking the sales workflow.
+9. **Human-Friendly SLA Duration Timer (`formatSlaDuration`):**
+   * Replaced raw elapsed minute counts (such as `2740m`) with intuitive, human-readable elapsed duration units: `< 60m` (e.g. `14m • SLA On Track`), `1h–24h` (e.g. `2h 15m • SLA Warning`), and `> 24h` (e.g. `⚠️ 1d 21h • SLA Breached`). Staff instantly understand age of lead without confusing large numbers.
+10. **Dual-Axis Horizontal Lifecycle Status Filter Bar (`ALL`, `NEW`, `REVIEWED`, `SENT`):**
+    * Positioned directly below the Category tabs to allow hotel staff to filter leads by their lifecycle stage within any active category (e.g. Weddings $\rightarrow$ New leads vs Sent quotes).
+    * **`NEW`**: Fresh incoming lead; AI draft quotation ready; awaiting staff review.
+    * **`REVIEWED`**: Staff has inspected/edited the quotation or saved internal notes; ready for dispatch.
+    * **`SENT`**: Reply dispatched to guest via Email/WhatsApp; SLA marked as `Resolved`.
+    * **Universal Multi-Criteria Search**: Synchronized search input filters instantaneously across guest name, phone, email, enquiry number, raw message, category, channel, internal notes, and lifecycle status keywords (`"new"`, `"reviewed"`, `"sent"`).
 
 

@@ -55,6 +55,7 @@ export function UnifiedEnquiryInbox() {
   const [enquiries, setEnquiries] = useState<EnquiryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEnquiry, setSelectedEnquiry] = useState<EnquiryItem | null>(null);
   const [draftText, setDraftText] = useState("");
@@ -460,24 +461,44 @@ export function UnifiedEnquiryInbox() {
     });
   }, [selectedEnquiry, enquiries]);
 
-  // Filtering Logic
-  const filteredList = useMemo(() => {
+  // Base pool filtered by active category / archive tab
+  const categoryFiltered = useMemo(() => {
     return enquiries.filter((e) => {
       // Archive tab separation
       if (selectedCategory === "ARCHIVED") {
-        if (e.status !== "ARCHIVED") return false;
-      } else {
-        // Active view: hide archived leads by default
-        if (e.status === "ARCHIVED") return false;
+        return e.status === "ARCHIVED";
+      }
+      // Active view: hide archived leads by default
+      if (e.status === "ARCHIVED") return false;
 
-        if (selectedCategory === "GM_REVIEW") {
-          if (!e.requiresGmReview) return false;
-        } else if (selectedCategory !== "ALL") {
-          if (e.category !== selectedCategory) return false;
-        }
+      if (selectedCategory === "GM_REVIEW") {
+        return Boolean(e.requiresGmReview);
+      } else if (selectedCategory !== "ALL") {
+        return e.category === selectedCategory;
+      }
+      return true;
+    });
+  }, [enquiries, selectedCategory]);
+
+  // Lifecycle status counts within the currently active category view
+  const statusCounts = useMemo(() => {
+    return {
+      all: categoryFiltered.length,
+      new: categoryFiltered.filter((e) => e.status === "NEW").length,
+      reviewed: categoryFiltered.filter((e) => e.status === "REVIEWED").length,
+      sent: categoryFiltered.filter((e) => e.status === "SENT").length,
+    };
+  }, [categoryFiltered]);
+
+  // Combined Multi-Criteria Filtering: Category + Status Filter + Search Keywords
+  const filteredList = useMemo(() => {
+    return categoryFiltered.filter((e) => {
+      // 1. Horizontal Lifecycle Status Filter (for active views)
+      if (selectedCategory !== "ARCHIVED" && selectedStatus !== "ALL") {
+        if (e.status !== selectedStatus) return false;
       }
 
-      // Keyword Search
+      // 2. Keyword Search across all fields, status tags, categories, and notes
       const q = searchTerm.toLowerCase().trim();
       if (!q) return true;
 
@@ -486,10 +507,28 @@ export function UnifiedEnquiryInbox() {
         e.rawMessage.toLowerCase().includes(q) ||
         (e.guestName && e.guestName.toLowerCase().includes(q)) ||
         (e.guestEmail && e.guestEmail.toLowerCase().includes(q)) ||
-        (e.guestPhone && e.guestPhone.includes(q))
+        (e.guestPhone && e.guestPhone.includes(q)) ||
+        e.category.toLowerCase().includes(q) ||
+        e.status.toLowerCase().includes(q) ||
+        e.source.toLowerCase().includes(q) ||
+        e.assignedRole.toLowerCase().includes(q) ||
+        (e.extractedDates && e.extractedDates.toLowerCase().includes(q)) ||
+        (e.internalNotes && e.internalNotes.toLowerCase().includes(q))
       );
     });
-  }, [enquiries, selectedCategory, searchTerm]);
+  }, [categoryFiltered, selectedCategory, selectedStatus, searchTerm]);
+
+  // Keep selected enquiry in sync when filters change
+  useEffect(() => {
+    if (filteredList.length > 0) {
+      const stillPresent = filteredList.some((e) => e.id === selectedEnquiry?.id);
+      if (!stillPresent) {
+        handleSelectEnquiry(filteredList[0]);
+      }
+    } else {
+      setSelectedEnquiry(null);
+    }
+  }, [filteredList]);
 
   // Category Counts (active only, excluding archived)
   const activeEnquiries = enquiries.filter((e) => e.status !== "ARCHIVED");
@@ -662,11 +701,21 @@ export function UnifiedEnquiryInbox() {
             <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search enquiries, pax, names..."
+              placeholder="Search enquiries, pax, name, status..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-1.5 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#384432]"
+              className="pl-8 pr-7 py-1.5 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#384432]"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                title="Clear Search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* 1-Click Export Enquiries to CSV */}
@@ -689,6 +738,131 @@ export function UnifiedEnquiryInbox() {
           </button>
         </div>
       </div>
+
+      {/* Secondary Horizontal Lifecycle Status Filter Bar */}
+      {selectedCategory !== "ARCHIVED" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-stone-50/80 border border-stone-200/80 rounded-2xl px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500 mr-1 flex items-center gap-1">
+              <span>Status:</span>
+            </span>
+
+            {/* ALL Statuses */}
+            <button
+              type="button"
+              onClick={() => setSelectedStatus("ALL")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                selectedStatus === "ALL"
+                  ? "bg-[#384432] text-white shadow-xs"
+                  : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-100"
+              }`}
+            >
+              <span>All Statuses</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  selectedStatus === "ALL" ? "bg-white/20 text-white" : "bg-stone-100 text-stone-700"
+                }`}
+              >
+                {statusCounts.all}
+              </span>
+            </button>
+
+            {/* NEW Leads */}
+            <button
+              type="button"
+              onClick={() => setSelectedStatus("NEW")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                selectedStatus === "NEW"
+                  ? "bg-amber-500 text-white shadow-xs ring-2 ring-amber-300"
+                  : "bg-white text-amber-900 border border-amber-200 hover:bg-amber-50"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  selectedStatus === "NEW" ? "bg-white animate-pulse" : "bg-amber-500"
+                }`}
+              />
+              <span>New</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  selectedStatus === "NEW" ? "bg-white/30 text-white" : "bg-amber-100 text-amber-950 font-bold"
+                }`}
+              >
+                {statusCounts.new}
+              </span>
+            </button>
+
+            {/* REVIEWED Leads */}
+            <button
+              type="button"
+              onClick={() => setSelectedStatus("REVIEWED")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                selectedStatus === "REVIEWED"
+                  ? "bg-blue-600 text-white shadow-xs ring-2 ring-blue-300"
+                  : "bg-white text-blue-900 border border-blue-200 hover:bg-blue-50"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  selectedStatus === "REVIEWED" ? "bg-white" : "bg-blue-600"
+                }`}
+              />
+              <span>Reviewed</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  selectedStatus === "REVIEWED" ? "bg-white/30 text-white" : "bg-blue-100 text-blue-950 font-bold"
+                }`}
+              >
+                {statusCounts.reviewed}
+              </span>
+            </button>
+
+            {/* SENT Leads */}
+            <button
+              type="button"
+              onClick={() => setSelectedStatus("SENT")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                selectedStatus === "SENT"
+                  ? "bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-300"
+                  : "bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-50"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  selectedStatus === "SENT" ? "bg-white" : "bg-emerald-600"
+                }`}
+              />
+              <span>Sent</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  selectedStatus === "SENT" ? "bg-white/30 text-white" : "bg-emerald-100 text-emerald-950 font-bold"
+                }`}
+              >
+                {statusCounts.sent}
+              </span>
+            </button>
+          </div>
+
+          <div className="text-[11px] text-stone-500 hidden sm:block">
+            Showing <strong className="text-stone-900">{filteredList.length}</strong> {selectedStatus !== "ALL" ? selectedStatus.toLowerCase() : ""} lead{filteredList.length !== 1 ? "s" : ""}
+            {searchTerm && <span> matching &ldquo;<span className="font-semibold text-stone-800">{searchTerm}</span>&rdquo;</span>}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-stone-100 border border-stone-200 rounded-2xl px-4 py-2.5 text-xs text-stone-600">
+          <div className="flex items-center gap-2 font-medium">
+            <Archive className="w-4 h-4 text-stone-500" />
+            <span>Viewing Archived Enquiries ({archivedCount}) — Safely set aside from active sales pipeline.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedCategory("ALL")}
+            className="text-[11px] font-bold text-[#384432] hover:underline"
+          >
+            ← Back to Active Inbox
+          </button>
+        </div>
+      )}
 
       {/* Main 2-Column Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1317,6 +1491,20 @@ function CategoryBadge({ category }: { category: EnquiryItem["category"] }) {
   }
 }
 
+function formatSlaDuration(elapsedMins: number): string {
+  if (elapsedMins < 60) {
+    return `${elapsedMins}m`;
+  }
+  const hours = Math.floor(elapsedMins / 60);
+  const mins = elapsedMins % 60;
+  if (hours < 24) {
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+}
+
 function getSlaIndicator(createdAt: string, status: string): { label: string; className: string } {
   if (status === "SENT") {
     return {
@@ -1334,20 +1522,21 @@ function getSlaIndicator(createdAt: string, status: string): { label: string; cl
 
   const elapsedMs = Date.now() - new Date(createdAt).getTime();
   const elapsedMins = Math.max(1, Math.round(elapsedMs / (1000 * 60)));
+  const formattedTime = formatSlaDuration(elapsedMins);
 
   if (elapsedMins < 15) {
     return {
-      label: `${elapsedMins}m • SLA On Track`,
+      label: `${formattedTime} • SLA On Track`,
       className: "bg-emerald-50 text-emerald-800 border-emerald-300 font-medium",
     };
   } else if (elapsedMins <= 30) {
     return {
-      label: `${elapsedMins}m • SLA Warning`,
+      label: `${formattedTime} • SLA Warning`,
       className: "bg-amber-50 text-amber-800 border-amber-300 font-bold",
     };
   } else {
     return {
-      label: `⚠️ ${elapsedMins}m • SLA Breached`,
+      label: `⚠️ ${formattedTime} • SLA Breached`,
       className: "bg-red-50 text-red-900 border-red-300 font-bold",
     };
   }
