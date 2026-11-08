@@ -248,7 +248,12 @@ export function EventEnquiryWizard() {
             </div>
 
             <div>
-              <label className="block font-bold text-stone-700 mb-1">Phone Number</label>
+              <label className="block font-bold text-stone-700 mb-1">
+                Phone Number{" "}
+                <span className="text-[10px] text-emerald-700 font-medium">
+                  (Enter your phone to receive live WhatsApp)
+                </span>
+              </label>
               <input
                 type="tel"
                 placeholder="e.g. +91 98765 43210"
