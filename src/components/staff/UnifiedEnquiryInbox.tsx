@@ -25,6 +25,8 @@ import {
   Clock,
   FileText,
   TrendingUp,
+  Plus,
+  X,
 } from "lucide-react";
 
 interface EnquiryItem {
@@ -61,6 +63,11 @@ export function UnifiedEnquiryInbox() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  // Missing Phone Number Modal Prompt State
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [inputPhone, setInputPhone] = useState("");
+  const [phoneModalIntent, setPhoneModalIntent] = useState<"whatsapp" | "call" | "save">("whatsapp");
 
   const fetchEnquiries = async () => {
     setLoading(true);
@@ -139,6 +146,15 @@ export function UnifiedEnquiryInbox() {
   // Human-in-the-Loop: Approve & Dispatch via WhatsApp Web
   const handleApproveAndWhatsApp = async () => {
     if (!selectedEnquiry) return;
+
+    // Edge case: If no phone number is provided, trigger modal prompt to enter number
+    if (!selectedEnquiry.guestPhone || !selectedEnquiry.guestPhone.trim()) {
+      setInputPhone("");
+      setPhoneModalIntent("whatsapp");
+      setShowPhoneModal(true);
+      return;
+    }
+
     setActionLoading(true);
     try {
       const res = await fetch(`/api/staff/enquiries/${selectedEnquiry.id}`, {
@@ -178,6 +194,79 @@ export function UnifiedEnquiryInbox() {
 
       setSelectedEnquiry(data.enquiry);
       fetchEnquiries();
+    } catch (err: any) {
+      showToast("error", err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Save phone number entered via modal and proceed with action
+  const handleSavePhoneAndProceed = async () => {
+    if (!selectedEnquiry) return;
+    const trimmed = inputPhone.trim();
+    if (!trimmed || trimmed.length < 7) {
+      showToast("error", "Please enter a valid phone number (at least 7 to 10 digits)");
+      return;
+    }
+
+    const cleanPhone = trimmed.replace(/\D/g, "");
+    const isMockNumber =
+      cleanPhone === "9811122334" ||
+      cleanPhone === "9876512345" ||
+      cleanPhone === "9876543210" ||
+      cleanPhone === "9444455555" ||
+      cleanPhone === "9999988888" ||
+      cleanPhone === "9123456789" ||
+      cleanPhone.startsWith("0000") ||
+      cleanPhone.startsWith("99999") ||
+      cleanPhone.length < 10;
+
+    setActionLoading(true);
+    try {
+      if (phoneModalIntent === "whatsapp") {
+        const res = await fetch(`/api/staff/enquiries/${selectedEnquiry.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "approveAndSend",
+            draftReply: draftText,
+            guestPhone: trimmed,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to update phone and approve enquiry");
+
+        setShowPhoneModal(false);
+        if (!isMockNumber) {
+          const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(draftText)}`;
+          window.open(waUrl, "_blank");
+          showToast("success", `Phone saved & WhatsApp Web opened for ${selectedEnquiry.enquiryNumber}`);
+        } else {
+          showToast("success", `Phone saved & logged as SENT! (WhatsApp skipped for mock test number)`);
+        }
+        setSelectedEnquiry(data.enquiry);
+        fetchEnquiries();
+      } else {
+        const res = await fetch(`/api/staff/enquiries/${selectedEnquiry.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "updatePhone",
+            guestPhone: trimmed,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to save phone number");
+
+        setShowPhoneModal(false);
+        showToast("success", `Phone number saved for ${selectedEnquiry.enquiryNumber}`);
+        if (phoneModalIntent === "call" && !isMockNumber) {
+          window.location.href = `tel:${trimmed}`;
+        }
+        setSelectedEnquiry(data.enquiry);
+        fetchEnquiries();
+      }
     } catch (err: any) {
       showToast("error", err.message);
     } finally {
@@ -742,67 +831,117 @@ export function UnifiedEnquiryInbox() {
                   <p className="text-xs text-stone-500 mt-1.5 flex flex-wrap items-center gap-2">
                     <span>From: <strong className="text-stone-800">{selectedEnquiry.guestName}</strong></span>
                     {selectedEnquiry.guestEmail && <span>• {selectedEnquiry.guestEmail}</span>}
-                    {selectedEnquiry.guestPhone && <span>• {selectedEnquiry.guestPhone}</span>}
+                    {selectedEnquiry.guestPhone ? (
+                      <span>• {selectedEnquiry.guestPhone}</span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-stone-400">
+                        • <em>No phone number on record</em>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInputPhone("");
+                            setPhoneModalIntent("save");
+                            setShowPhoneModal(true);
+                          }}
+                          className="text-emerald-700 hover:text-emerald-800 font-bold underline text-[11px] flex items-center gap-0.5 ml-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Phone</span>
+                        </button>
+                      </span>
+                    )}
                   </p>
 
                   {/* Quick Contact Links: Call & WhatsApp */}
-                  {selectedEnquiry.guestPhone && (() => {
-                    const cleanPhone = selectedEnquiry.guestPhone.replace(/\D/g, "");
-                    const isMockNumber =
-                      cleanPhone === "9811122334" ||
-                      cleanPhone === "9876512345" ||
-                      cleanPhone === "9876543210" ||
-                      cleanPhone === "9444455555" ||
-                      cleanPhone === "9999988888" ||
-                      cleanPhone === "9123456789" ||
-                      cleanPhone.startsWith("0000") ||
-                      cleanPhone.startsWith("99999") ||
-                      cleanPhone.length < 10;
+                  {selectedEnquiry.guestPhone ? (
+                    (() => {
+                      const cleanPhone = selectedEnquiry.guestPhone.replace(/\D/g, "");
+                      const isMockNumber =
+                        cleanPhone === "9811122334" ||
+                        cleanPhone === "9876512345" ||
+                        cleanPhone === "9876543210" ||
+                        cleanPhone === "9444455555" ||
+                        cleanPhone === "9999988888" ||
+                        cleanPhone === "9123456789" ||
+                        cleanPhone.startsWith("0000") ||
+                        cleanPhone.startsWith("99999") ||
+                        cleanPhone.length < 10;
 
-                    return (
-                      <div className="flex items-center gap-2 mt-2">
-                        <a
-                          href={isMockNumber ? "#" : `tel:${selectedEnquiry.guestPhone}`}
-                          onClick={(e) => {
-                            if (isMockNumber) {
-                              e.preventDefault();
-                              showToast("error", "Dialer disabled for mock test phone number");
-                            }
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-medium transition"
-                        >
-                          <Phone className="w-3 h-3 text-stone-600" />
-                          <span>Call Guest</span>
-                        </a>
+                      return (
+                        <div className="flex items-center gap-2 mt-2">
+                          <a
+                            href={isMockNumber ? "#" : `tel:${selectedEnquiry.guestPhone}`}
+                            onClick={(e) => {
+                              if (isMockNumber) {
+                                e.preventDefault();
+                                showToast("error", "Dialer disabled for mock test phone number");
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-medium transition"
+                          >
+                            <Phone className="w-3 h-3 text-stone-600" />
+                            <span>Call Guest</span>
+                          </a>
 
-                        <a
-                          href={
-                            isMockNumber
-                              ? "#"
-                              : `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-                                  draftText || selectedEnquiry.draftReply || ""
-                                )}`
-                          }
-                          onClick={(e) => {
-                            if (isMockNumber) {
-                              e.preventDefault();
-                              showToast(
-                                "error",
-                                "WhatsApp Web disabled for mock test phone number. Enter a real number to test."
-                              );
+                          <a
+                            href={
+                              isMockNumber
+                                ? "#"
+                                : `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
+                                    draftText || selectedEnquiry.draftReply || ""
+                                  )}`
                             }
-                          }}
-                          target={isMockNumber ? undefined : "_blank"}
-                          rel={isMockNumber ? undefined : "noopener noreferrer"}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold transition border border-emerald-200"
-                          title="Open WhatsApp with approved reply pre-filled"
-                        >
-                          <MessageSquare className="w-3 h-3 text-emerald-600" />
-                          <span>Send via WhatsApp Web</span>
-                        </a>
-                      </div>
-                    );
-                  })()}
+                            onClick={(e) => {
+                              if (isMockNumber) {
+                                e.preventDefault();
+                                showToast(
+                                  "error",
+                                  "WhatsApp Web disabled for mock test phone number. Enter a real number to test."
+                                );
+                              }
+                            }}
+                            target={isMockNumber ? undefined : "_blank"}
+                            rel={isMockNumber ? undefined : "noopener noreferrer"}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold transition border border-emerald-200"
+                            title="Open WhatsApp with approved reply pre-filled"
+                          >
+                            <MessageSquare className="w-3 h-3 text-emerald-600" />
+                            <span>Send via WhatsApp Web</span>
+                          </a>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInputPhone("");
+                          setPhoneModalIntent("call");
+                          setShowPhoneModal(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-[11px] font-medium transition"
+                        title="Enter guest phone number to call"
+                      >
+                        <Phone className="w-3 h-3 text-stone-500" />
+                        <span>Call Guest (Enter #)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInputPhone("");
+                          setPhoneModalIntent("whatsapp");
+                          setShowPhoneModal(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold transition border border-emerald-200"
+                        title="Enter guest phone number to send via WhatsApp Web"
+                      >
+                        <MessageSquare className="w-3 h-3 text-emerald-600" />
+                        <span>WhatsApp (Enter #)</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Top Controls: Re-Route & Archive Toggle */}
@@ -977,17 +1116,19 @@ export function UnifiedEnquiryInbox() {
                       </button>
                     )}
 
-                    {selectedEnquiry.guestPhone && (
-                      <button
-                        onClick={handleApproveAndWhatsApp}
-                        disabled={actionLoading}
-                        className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                        title="Approve reply, log as SENT in database, and launch WhatsApp Web"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>Approve & WhatsApp</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={handleApproveAndWhatsApp}
+                      disabled={actionLoading}
+                      className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                      title={
+                        selectedEnquiry.guestPhone
+                          ? "Approve reply, log as SENT in database, and launch WhatsApp Web"
+                          : "This enquiry has no phone number. Click to enter a phone number and launch WhatsApp Web"
+                      }
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>{selectedEnquiry.guestPhone ? "Approve & WhatsApp" : "Approve & WhatsApp (Add #)"}</span>
+                    </button>
 
                     <button
                       onClick={handleApproveAndSend}
@@ -1044,6 +1185,98 @@ export function UnifiedEnquiryInbox() {
           )}
         </div>
       </div>
+
+      {/* Missing Phone Number Alert Modal Dialog */}
+      {showPhoneModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {phoneModalIntent === "call" ? (
+                    <Phone className="w-5 h-5 text-emerald-700" />
+                  ) : (
+                    <MessageSquare className="w-5 h-5 text-emerald-700" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-base text-stone-900">
+                    {phoneModalIntent === "call"
+                      ? "Enter Phone Number to Call"
+                      : phoneModalIntent === "whatsapp"
+                      ? "Enter Phone for WhatsApp Dispatch"
+                      : "Add Phone Number to Record"}
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    {selectedEnquiry?.enquiryNumber} • {selectedEnquiry?.guestName}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPhoneModal(false)}
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+              ⚠️ <strong>No Phone Number on Record:</strong> This enquiry does not contain a phone number. Enter a mobile number below to dispatch via WhatsApp Web or make a direct phone call.
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-stone-700">
+                Guest Mobile Number <span className="text-stone-400 font-normal">(e.g. +91 98765 43210)</span>
+              </label>
+              <input
+                type="tel"
+                autoFocus
+                placeholder="Enter mobile number..."
+                value={inputPhone}
+                onChange={(e) => setInputPhone(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSavePhoneAndProceed();
+                  }
+                }}
+                className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#384432]"
+              />
+              <p className="text-[11px] text-stone-400 italic">
+                Tip: Enter your own phone number if you want to test receiving the message live!
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowPhoneModal(false)}
+                className="px-4 py-2 border border-stone-200 rounded-xl text-xs font-bold text-stone-600 hover:bg-stone-50 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSavePhoneAndProceed}
+                disabled={actionLoading || !inputPhone.trim()}
+                className="px-5 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50 shadow-xs"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>
+                  {phoneModalIntent === "whatsapp"
+                    ? "Save & Open WhatsApp"
+                    : phoneModalIntent === "call"
+                    ? "Save & Call"
+                    : "Save Number"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

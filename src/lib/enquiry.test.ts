@@ -9,6 +9,7 @@ import {
   rerouteEnquiry,
   archiveEnquiry,
   updateEnquiryNotes,
+  updateEnquiryPhone,
   calculateEstimatedDealValue,
   checkDuplicateEnquiries,
 } from "./enquiry";
@@ -162,6 +163,11 @@ describe("enquiry.ts - AI Enquiry Routing, Entity Extraction & Human-in-the-Loop
 
       const roomDeal = calculateEstimatedDealValue("ROOM");
       expect(roomDeal).toContain("₹13,000");
+    });
+
+    it("updates guest phone number on an enquiry", async () => {
+      const updated = await updateEnquiryPhone(testEnquiryId, "+91 99000 11223");
+      expect(updated.guestPhone).toBe("+91 99000 11223");
     });
 
     it("detects duplicate leads by phone or email", async () => {

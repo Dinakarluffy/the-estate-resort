@@ -7,6 +7,7 @@ import {
   rerouteEnquiry,
   archiveEnquiry,
   updateEnquiryNotes,
+  updateEnquiryPhone,
   checkDuplicateEnquiries,
 } from "@/lib/enquiry";
 
@@ -32,7 +33,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { action, draftReply, category, assignedRole, archiveState, internalNotes } = body;
+    const { action, draftReply, category, assignedRole, archiveState, internalNotes, guestPhone } = body;
 
     if (action === "updateDraft") {
       if (!draftReply) {
@@ -43,7 +44,18 @@ export async function PATCH(
     }
 
     if (action === "approveAndSend") {
+      if (guestPhone) {
+        await updateEnquiryPhone(id, guestPhone);
+      }
       const updated = await approveAndSendEnquiry(id, draftReply);
+      return NextResponse.json({ success: true, enquiry: updated });
+    }
+
+    if (action === "updatePhone") {
+      if (!guestPhone || !guestPhone.trim()) {
+        return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
+      }
+      const updated = await updateEnquiryPhone(id, guestPhone);
       return NextResponse.json({ success: true, enquiry: updated });
     }
 

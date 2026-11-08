@@ -512,7 +512,7 @@ The platform was built with a strict **hospitality-first architecture** conformi
 
 ## 4. Test Verification & Quality Metrics
 
-* **130 Unit & Integration Tests Passing (100% Green)**:
+* **131 Unit & Integration Tests Passing (100% Green)**:
   * `rates.test.ts` (19 tests): Dynamic matrix, inline editing, allotment floors, blackout conflicts, promo CRUD.
   * `export.test.ts` (12 tests): RFC 4180 CSV escaping, SAC 996311 CGST/SGST split, UTF-8 BOM, `CHECKED_IN`/`CHECKED_OUT` status transitions.
   * `booking.test.ts` (12 tests): Multi-night checkout, GST calculation, atomic inventory decrements.
@@ -522,7 +522,7 @@ The platform was built with a strict **hospitality-first architecture** conformi
   * `promo.test.ts` (8 tests): Percentage discount, max caps, date windows, minimum booking tariffs.
   * `payment.test.ts` (8 tests): Mock payment token generation and verification.
   * `gemini.test.ts` & `gemini-live.test.ts` (12 tests): Live Gemini 3.5 Flash connectivity & deterministic fallbacks.
-  * `enquiry.test.ts` (14 tests): AI classification, entity extraction, budget estimation, GM alert routing, archive/restore, internal notes, deal calculation, duplicate detection.
+  * `enquiry.test.ts` (15 tests): AI classification, entity extraction, budget estimation, GM alert routing, archive/restore, internal notes, phone update, deal calculation, duplicate detection.
 * **Production Build:** Compiled cleanly with zero errors across all 33 routes (`npx next build`).
 * **Local Git Version Control:** Clean local commit history with structured feature and fix messages.
 
@@ -574,5 +574,9 @@ The platform was built with a strict **hospitality-first architecture** conformi
    * GM and Head of Sales can download a standardized CSV file with 15 columns for weekly revenue and conversion meetings.
 7. **Duplicate Enquiry / Flood Detection Alert:**
    * Cross-references phone and email to detect if a guest submitted multiple forms within 24 hours, displaying an alert banner to prevent staff from sending conflicting quotes.
+8. **Missing Phone Number In-App Alert & Capture Modal:**
+   * Handles the edge case where guest enquiries arrive via Web form or forwarded email without a mobile number.
+   * If staff clicks *"Approve & WhatsApp (Add #)"* or *"Call Guest (Enter #)"*, the system displays a luxury in-app alert modal: *"⚠️ No Phone Number on Record. Please enter the guest's phone number to approve and dispatch via WhatsApp or make a direct phone call."*
+   * Saves the phone number to the enquiry in the database (`updateEnquiryPhone`) and seamlessly launches WhatsApp Web / phone dialer without breaking the sales workflow.
 
 

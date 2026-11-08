@@ -190,6 +190,18 @@ export async function archiveEnquiry(id: string, archiveState: boolean = true) {
 }
 
 /**
+ * Updates guest phone number on an enquiry
+ */
+export async function updateEnquiryPhone(id: string, phone: string) {
+  return prisma.enquiry.update({
+    where: { id },
+    data: {
+      guestPhone: phone.trim(),
+    },
+  });
+}
+
+/**
  * Updates private internal staff collaboration notes
  */
 export async function updateEnquiryNotes(id: string, notes: string) {
