@@ -9,6 +9,7 @@ import {
   setBlackoutDate,
   removeBlackoutDate,
   getAllBlackoutDates,
+  checkBlackoutPreconditions,
   createPromoCode,
   togglePromoCodeStatus,
   getAllPromoCodes,
@@ -185,6 +186,52 @@ describe("rates.ts - Dynamic Rates, Allotment Matrix & GM Inventory Controls", (
       await expect(setBlackoutDate(testRoomTypeId, testDate1, "")).rejects.toThrow(
         "A reason must be provided for blackout dates"
       );
+    });
+
+    it("prevents redundant room-specific blackout when date is already blocked resort-wide", async () => {
+      // 1. Set resort-wide buyout
+      const resortBlackout = await setBlackoutDate(
+        null,
+        testDate1,
+        "Sharma Wedding Buyout"
+      );
+
+      // 2. Try to set room-specific blackout on the same date
+      await expect(
+        setBlackoutDate(testRoomTypeId, testDate1, "Villa Maintenance")
+      ).rejects.toThrow(/already blocked Resort-Wide/);
+
+      // Clean up
+      await removeBlackoutDate(resortBlackout.id);
+    });
+
+    it("consolidates existing individual room blackouts when upgraded to resort-wide buyout", async () => {
+      // 1. Set room-specific blackout
+      await setBlackoutDate(testRoomTypeId, testDate2, "Plumbing Repair");
+
+      // 2. Upgrade date to resort-wide buyout
+      const resortBlackout = await setBlackoutDate(
+        null,
+        testDate2,
+        "Mega Corporate Buyout"
+      );
+
+      // 3. Verify individual room blackout was consolidated into resort-wide
+      const allOnDate = await prisma.blackoutDate.findMany({
+        where: { date: testDate2 },
+      });
+      expect(allOnDate.length).toBe(1);
+      expect(allOnDate[0].roomTypeId).toBeNull();
+      expect(allOnDate[0].reason).toBe("Mega Corporate Buyout");
+
+      // Clean up
+      await removeBlackoutDate(resortBlackout.id);
+    });
+
+    it("checks blackout preconditions and returns active booking alerts", async () => {
+      const preconditions = await checkBlackoutPreconditions(testDate1, testRoomTypeId);
+      expect(typeof preconditions.isResortWideBlocked).toBe("boolean");
+      expect(typeof preconditions.activeBookingsCount).toBe("number");
     });
   });
 

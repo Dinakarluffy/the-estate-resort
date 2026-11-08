@@ -257,7 +257,55 @@ export async function updateWebsiteAllotment(
 }
 
 /**
- * Sets a blackout date (roomTypeId = null for resort-wide blackout)
+ * Inspects a date for existing blackouts or active guest reservations before scheduling
+ */
+export async function checkBlackoutPreconditions(date: string, roomTypeId: string | null) {
+  const [resortWide, specificRoom, activeBookings] = await Promise.all([
+    prisma.blackoutDate.findFirst({
+      where: { date, roomTypeId: null },
+    }),
+    roomTypeId
+      ? prisma.blackoutDate.findFirst({
+          where: { date, roomTypeId },
+          include: { roomType: { select: { name: true } } },
+        })
+      : null,
+    prisma.booking.findMany({
+      where: {
+        checkIn: { lte: date },
+        checkOut: { gt: date },
+        status: { in: ["CONFIRMED", "CHECKED_IN"] },
+        ...(roomTypeId ? { roomTypeId } : {}),
+      },
+      select: {
+        bookingNumber: true,
+        guestName: true,
+        status: true,
+        roomType: { select: { name: true } },
+      },
+    }),
+  ]);
+
+  return {
+    isResortWideBlocked: !!resortWide,
+    resortWideReason: resortWide?.reason || null,
+    isRoomTypeBlocked: !!specificRoom,
+    roomTypeReason: specificRoom?.reason || null,
+    roomTypeName: specificRoom?.roomType?.name || null,
+    activeBookingsCount: activeBookings.length,
+    activeBookings: activeBookings.map((b) => ({
+      bookingNumber: b.bookingNumber,
+      guestName: b.guestName,
+      roomType: b.roomType.name,
+    })),
+  };
+}
+
+/**
+ * Sets a blackout date (roomTypeId = null for resort-wide blackout).
+ * Enforces real-world hospitality hierarchy:
+ * 1. If date is already blocked Resort-Wide, individual room types cannot be redundantly blacked out.
+ * 2. If scheduling Resort-Wide, any individual room blackouts on that date are consolidated.
  */
 export async function setBlackoutDate(
   roomTypeId: string | null,
@@ -268,40 +316,64 @@ export async function setBlackoutDate(
     throw new Error("A reason must be provided for blackout dates");
   }
 
-  // If resort-wide, check if already blacked out
-  if (!roomTypeId) {
-    const existing = await prisma.blackoutDate.findFirst({
+  const trimmedReason = reason.trim();
+
+  // 1. Room-specific blackout requested
+  if (roomTypeId) {
+    // Check if Resort-Wide blackout already exists for this date
+    const existingResort = await prisma.blackoutDate.findFirst({
       where: { date, roomTypeId: null },
     });
-    if (existing) {
-      return prisma.blackoutDate.update({
-        where: { id: existing.id },
-        data: { reason: reason.trim() },
-      });
+
+    if (existingResort) {
+      throw new Error(
+        `Date ${date} is already blocked Resort-Wide ("${existingResort.reason}"). All 76 rooms are already closed for online booking.`
+      );
     }
-    return prisma.blackoutDate.create({
-      data: {
+
+    return prisma.blackoutDate.upsert({
+      where: {
+        roomTypeId_date: {
+          roomTypeId,
+          date,
+        },
+      },
+      update: {
+        reason: trimmedReason,
+      },
+      create: {
+        roomTypeId,
         date,
-        reason: reason.trim(),
-        roomTypeId: null,
+        reason: trimmedReason,
       },
     });
   }
 
-  return prisma.blackoutDate.upsert({
+  // 2. Resort-wide blackout requested (all 76 keys)
+  // Clean up any individual room blackouts for this date so they don't duplicate under resort-wide
+  await prisma.blackoutDate.deleteMany({
     where: {
-      roomTypeId_date: {
-        roomTypeId,
-        date,
-      },
-    },
-    update: {
-      reason: reason.trim(),
-    },
-    create: {
-      roomTypeId,
       date,
-      reason: reason.trim(),
+      roomTypeId: { not: null },
+    },
+  });
+
+  const existingResort = await prisma.blackoutDate.findFirst({
+    where: { date, roomTypeId: null },
+  });
+
+  if (existingResort) {
+    return prisma.blackoutDate.update({
+      where: { id: existingResort.id },
+      data: { reason: trimmedReason },
+    });
+  }
+
+  return prisma.blackoutDate.create({
+    data: {
+      date,
+      reason: trimmedReason,
+      roomTypeId: null,
     },
   });
 }

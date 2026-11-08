@@ -5,6 +5,7 @@ import {
   setBlackoutDate,
   removeBlackoutDate,
   getAllBlackoutDates,
+  checkBlackoutPreconditions,
 } from "@/lib/rates";
 
 async function verifyGmAuth() {
@@ -16,10 +17,23 @@ async function verifyGmAuth() {
   return user;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await verifyGmAuth();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized. GM role required." }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const checkDate = searchParams.get("checkDate");
+  const roomTypeId = searchParams.get("roomTypeId") || null;
+
+  if (checkDate) {
+    try {
+      const preconditions = await checkBlackoutPreconditions(checkDate, roomTypeId);
+      return NextResponse.json({ success: true, preconditions });
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
   }
 
   try {

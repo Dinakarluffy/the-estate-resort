@@ -47,11 +47,14 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
     heritageRoomId = heritage.id;
     suiteRoomId = suite.id;
 
-    // Choose dates 12 to 14 days in the future
+    // Advance to a weekday Monday well clear of any immediate manual test blackouts
     const d1 = new Date();
-    d1.setDate(d1.getDate() + 12);
-    const d2 = new Date();
-    d2.setDate(d2.getDate() + 14);
+    const dayOfWeek = d1.getDay();
+    const daysUntilMonday = ((8 - dayOfWeek) % 7) || 7;
+    d1.setDate(d1.getDate() + daysUntilMonday + 7);
+
+    const d2 = new Date(d1);
+    d2.setDate(d1.getDate() + 2); // Mon -> Wed (2 weekday nights)
 
     testCheckIn = d1.toISOString().split("T")[0];
     testCheckOut = d2.toISOString().split("T")[0];

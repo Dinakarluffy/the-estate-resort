@@ -15,6 +15,8 @@ import {
   ChevronRight,
   TrendingUp,
   ShieldAlert,
+  Info,
+  X,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/gst";
 
@@ -63,6 +65,16 @@ interface PromoItem {
   isActive: boolean;
 }
 
+interface BlackoutPrecondition {
+  isResortWideBlocked: boolean;
+  resortWideReason: string | null;
+  isRoomTypeBlocked: boolean;
+  roomTypeReason: string | null;
+  roomTypeName: string | null;
+  activeBookingsCount: number;
+  activeBookings: { bookingNumber: string; guestName: string; roomType: string }[];
+}
+
 export function RateAllotmentManager() {
   const [activeTab, setActiveTab] = useState<"rates" | "blackouts" | "promos">("rates");
   const [loading, setLoading] = useState(true);
@@ -82,10 +94,50 @@ export function RateAllotmentManager() {
   const [bulkPrice, setBulkPrice] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
-  // Add Blackout state
+  // Custom Styled Blackout Modal State (Eliminating window.prompt)
+  const [blackoutModal, setBlackoutModal] = useState<{
+    isOpen: boolean;
+    date: string;
+    roomTypeId: string | null;
+    roomTypeName: string;
+    reason: string;
+    isChecking: boolean;
+    preconditions: BlackoutPrecondition | null;
+    submitting: boolean;
+  }>({
+    isOpen: false,
+    date: "",
+    roomTypeId: null,
+    roomTypeName: "Resort-Wide (All 76 Keys)",
+    reason: "Estate Private Event",
+    isChecking: false,
+    preconditions: null,
+    submitting: false,
+  });
+
+  // Custom Styled Delete Blackout Modal State (Eliminating window.confirm)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    id: string;
+    date: string;
+    reason: string;
+    scopeName: string;
+    submitting: boolean;
+  }>({
+    isOpen: false,
+    id: "",
+    date: "",
+    reason: "",
+    scopeName: "",
+    submitting: false,
+  });
+
+  // Tab 2 Sidebar Form State & Precondition Live Check
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
   const [newBlackoutRoomTypeId, setNewBlackoutRoomTypeId] = useState<string>("");
   const [newBlackoutReason, setNewBlackoutReason] = useState("");
+  const [tab2Preconditions, setTab2Preconditions] = useState<BlackoutPrecondition | null>(null);
+  const [tab2Checking, setTab2Checking] = useState(false);
 
   // Add Promo state
   const [showPromoModal, setShowPromoModal] = useState(false);
@@ -140,6 +192,39 @@ export function RateAllotmentManager() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
+  // Precondition checker function
+  const fetchPreconditions = async (date: string, roomTypeId: string | null): Promise<BlackoutPrecondition | null> => {
+    if (!date) return null;
+    try {
+      const url = `/api/admin/blackout?checkDate=${date}&roomTypeId=${roomTypeId || ""}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) return data.preconditions;
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Live check in Tab 2 sidebar form when date or roomType changes
+  useEffect(() => {
+    if (!newBlackoutDate) {
+      setTab2Preconditions(null);
+      return;
+    }
+    let isCancelled = false;
+    setTab2Checking(true);
+    fetchPreconditions(newBlackoutDate, newBlackoutRoomTypeId || null).then((prec) => {
+      if (!isCancelled) {
+        setTab2Preconditions(prec);
+        setTab2Checking(false);
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [newBlackoutDate, newBlackoutRoomTypeId]);
+
   // 1-Click Rate Save
   const handleSaveRate = async (roomTypeId: string, date: string, newRate: number) => {
     try {
@@ -186,39 +271,98 @@ export function RateAllotmentManager() {
     }
   };
 
-  // Toggle Blackout from Calendar
-  const handleToggleDayBlackout = async (
+  // Open Custom Blackout Modal from Table Row (No native prompt!)
+  const handleOpenBlackoutModalFromTable = async (
     roomTypeId: string,
     date: string,
     isBlackout: boolean,
-    blackoutId?: string | null
+    blackoutId?: string | null,
+    blackoutReason?: string | null
   ) => {
+    if (isBlackout && blackoutId) {
+      // Open Delete Modal
+      setDeleteModal({
+        isOpen: true,
+        id: blackoutId,
+        date,
+        reason: blackoutReason || "Scheduled Blackout",
+        scopeName: matrix.find((m) => m.roomType.id === roomTypeId)?.roomType.name || "Room Blackout",
+        submitting: false,
+      });
+      return;
+    }
+
+    // Open Schedule Modal
+    const targetRoom = matrix.find((m) => m.roomType.id === roomTypeId);
+    setBlackoutModal({
+      isOpen: true,
+      date,
+      roomTypeId,
+      roomTypeName: targetRoom?.roomType.name || "Selected Room",
+      reason: "Estate Private Event",
+      isChecking: true,
+      preconditions: null,
+      submitting: false,
+    });
+
+    const prec = await fetchPreconditions(date, roomTypeId);
+    setBlackoutModal((prev) => ({ ...prev, isChecking: false, preconditions: prec }));
+  };
+
+  // Submit Schedule Blackout from Modal
+  const handleConfirmBlackoutModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!blackoutModal.date || !blackoutModal.reason.trim()) {
+      showToast("error", "Please provide a reason for the blackout");
+      return;
+    }
+
+    // Guard against redundant room blackout if already resort-wide
+    if (blackoutModal.roomTypeId && blackoutModal.preconditions?.isResortWideBlocked) {
+      showToast(
+        "error",
+        `Date ${blackoutModal.date} is already blocked Resort-Wide ("${blackoutModal.preconditions.resortWideReason}"). All rooms are already closed.`
+      );
+      return;
+    }
+
+    setBlackoutModal((prev) => ({ ...prev, submitting: true }));
     try {
-      if (isBlackout && blackoutId) {
-        // Remove blackout
-        const res = await fetch(`/api/admin/blackout?id=${blackoutId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to remove blackout");
-        showToast("success", `Blackout cleared for ${date}`);
-      } else {
-        // Add blackout
-        const reason = window.prompt("Reason for blocking this date:", "Estate Private Event");
-        if (!reason) return;
-        const res = await fetch("/api/admin/blackout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            roomTypeId,
-            date,
-            reason,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to set blackout");
-        showToast("success", `Blackout set for ${date}`);
-      }
+      const res = await fetch("/api/admin/blackout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomTypeId: blackoutModal.roomTypeId,
+          date: blackoutModal.date,
+          reason: blackoutModal.reason.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to schedule blackout");
+
+      showToast("success", `Blackout scheduled for ${blackoutModal.date}`);
+      setBlackoutModal((prev) => ({ ...prev, isOpen: false, submitting: false }));
       loadData();
     } catch (err: any) {
       showToast("error", err.message);
+      setBlackoutModal((prev) => ({ ...prev, submitting: false }));
+    }
+  };
+
+  // Confirm Delete Blackout from Modal (No native confirm!)
+  const handleConfirmDeleteBlackout = async () => {
+    if (!deleteModal.id) return;
+    setDeleteModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      const res = await fetch(`/api/admin/blackout?id=${deleteModal.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove blackout");
+
+      showToast("success", `Blackout removed for ${deleteModal.date}. Inventory re-opened.`);
+      setDeleteModal({ isOpen: false, id: "", date: "", reason: "", scopeName: "", submitting: false });
+      loadData();
+    } catch (err: any) {
+      showToast("error", err.message);
+      setDeleteModal((prev) => ({ ...prev, submitting: false }));
     }
   };
 
@@ -255,13 +399,23 @@ export function RateAllotmentManager() {
     }
   };
 
-  // Add Blackout
-  const handleAddBlackout = async (e: React.FormEvent) => {
+  // Add Blackout from Tab 2 Sidebar Form
+  const handleAddBlackoutFromTab2 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBlackoutDate || !newBlackoutReason.trim()) {
       showToast("error", "Please provide a date and reason");
       return;
     }
+
+    // Real-world check: If date is already resort-wide blocked, block individual room duplication
+    if (newBlackoutRoomTypeId && tab2Preconditions?.isResortWideBlocked) {
+      showToast(
+        "error",
+        `Date ${newBlackoutDate} is already blocked Resort-Wide ("${tab2Preconditions.resortWideReason}"). All 76 rooms are already closed.`
+      );
+      return;
+    }
+
     try {
       const res = await fetch("/api/admin/blackout", {
         method: "POST",
@@ -269,7 +423,7 @@ export function RateAllotmentManager() {
         body: JSON.stringify({
           date: newBlackoutDate,
           roomTypeId: newBlackoutRoomTypeId || null,
-          reason: newBlackoutReason,
+          reason: newBlackoutReason.trim(),
         }),
       });
       const data = await res.json();
@@ -278,19 +432,7 @@ export function RateAllotmentManager() {
       showToast("success", `Blackout scheduled for ${newBlackoutDate}`);
       setNewBlackoutDate("");
       setNewBlackoutReason("");
-      loadData();
-    } catch (err: any) {
-      showToast("error", err.message);
-    }
-  };
-
-  // Delete Blackout
-  const handleDeleteBlackout = async (id: string, date: string) => {
-    if (!confirm(`Remove blackout for ${date}? Direct booking will re-open for this date.`)) return;
-    try {
-      const res = await fetch(`/api/admin/blackout?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete blackout");
-      showToast("success", `Blackout removed for ${date}`);
+      setTab2Preconditions(null);
       loadData();
     } catch (err: any) {
       showToast("error", err.message);
@@ -594,15 +736,16 @@ export function RateAllotmentManager() {
                             </strong>
                           </td>
 
-                          {/* Blackout Actions */}
+                          {/* Blackout Actions (Triggering Custom Styled Modal) */}
                           <td className="py-3 px-4 text-right">
                             <button
                               onClick={() =>
-                                handleToggleDayBlackout(
+                                handleOpenBlackoutModalFromTable(
                                   selectedMatrix.roomType.id,
                                   day.date,
                                   day.isBlackout,
-                                  day.blackoutId
+                                  day.blackoutId,
+                                  day.blackoutReason
                                 )
                               }
                               className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${
@@ -640,7 +783,7 @@ export function RateAllotmentManager() {
               Blackouts disable online direct bookings for resort buyouts, destination weddings, or routine maintenance.
             </p>
 
-            <form onSubmit={handleAddBlackout} className="space-y-3 text-xs">
+            <form onSubmit={handleAddBlackoutFromTab2} className="space-y-3 text-xs">
               <div>
                 <label className="block text-stone-700 font-bold mb-1">Blackout Date</label>
                 <input
@@ -657,7 +800,7 @@ export function RateAllotmentManager() {
                 <select
                   value={newBlackoutRoomTypeId}
                   onChange={(e) => setNewBlackoutRoomTypeId(e.target.value)}
-                  className="w-full p-2.5 border border-stone-200 rounded-xl bg-stone-50 text-stone-900 focus:ring-2 focus:ring-[#384432] outline-none"
+                  className="w-full p-2.5 border border-stone-200 rounded-xl bg-stone-50 text-stone-900 focus:ring-2 focus:ring-[#384432] outline-none font-semibold"
                 >
                   <option value="">Resort-Wide (All 76 Keys)</option>
                   {matrix.map((m) => (
@@ -668,23 +811,85 @@ export function RateAllotmentManager() {
                 </select>
               </div>
 
+              {/* Real-World Conflict Warning in Tab 2 Form */}
+              {tab2Checking && (
+                <div className="text-[11px] text-stone-400 italic">Checking date availability...</div>
+              )}
+
+              {tab2Preconditions?.isResortWideBlocked && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-1 text-amber-950">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Resort-Wide Blackout Already Active</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    This date is already blocked resort-wide for <strong>"{tab2Preconditions.resortWideReason}"</strong>. All 76 rooms are already closed for online booking.
+                  </p>
+                  {newBlackoutRoomTypeId ? (
+                    <p className="text-[10px] text-red-700 font-bold">
+                      ✕ You cannot block an individual room type when the entire resort is already closed.
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-emerald-800 font-semibold">
+                      Submitting will update the reason for the full estate buyout.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {tab2Preconditions?.activeBookingsCount && tab2Preconditions.activeBookingsCount > 0 ? (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-[11px] space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-900">
+                    <Info className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>{tab2Preconditions.activeBookingsCount} Existing Booking(s) on Date</span>
+                  </div>
+                  <p className="text-[10px] text-blue-800">
+                    Blackout will stop NEW direct bookings. Existing confirmed guests ({tab2Preconditions.activeBookings.map(b => b.bookingNumber).join(", ")}) retain their stay.
+                  </p>
+                </div>
+              ) : null}
+
               <div>
                 <label className="block text-stone-700 font-bold mb-1">Reason / Event Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Wedding Buyout (Verma-Shah)"
+                  placeholder="e.g. Wedding Buyout (Sharma-Verma)"
                   value={newBlackoutReason}
                   onChange={(e) => setNewBlackoutReason(e.target.value)}
                   className="w-full p-2.5 border border-stone-200 rounded-xl bg-stone-50 text-stone-900 focus:ring-2 focus:ring-[#384432] outline-none"
                 />
               </div>
 
+              {/* Quick suggestion pills */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {[
+                  "Full Estate Wedding Buyout",
+                  "Corporate Leadership Retreat",
+                  "Monsoon Deep Sanitization",
+                  "Plumbing & HVAC Maintenance",
+                ].map((sug) => (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => setNewBlackoutReason(sug)}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-700 transition"
+                  >
+                    + {sug}
+                  </button>
+                ))}
+              </div>
+
               <button
                 type="submit"
-                className="w-full py-2.5 bg-[#384432] hover:bg-[#283224] text-white font-bold rounded-xl transition shadow-sm"
+                disabled={Boolean(newBlackoutRoomTypeId && tab2Preconditions?.isResortWideBlocked)}
+                className="w-full py-2.5 bg-[#384432] hover:bg-[#283224] text-white font-bold rounded-xl transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Schedule Blackout
+                {newBlackoutRoomTypeId && tab2Preconditions?.isResortWideBlocked
+                  ? "Cannot Block (Already Resort-Wide)"
+                  : tab2Preconditions?.isResortWideBlocked
+                  ? "Update Resort-Wide Reason"
+                  : "Schedule Blackout"}
               </button>
             </form>
           </div>
@@ -712,16 +917,31 @@ export function RateAllotmentManager() {
                     <div>
                       <div className="flex items-center gap-2">
                         <strong className="font-mono text-stone-900 text-sm">{b.date}</strong>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                          {b.roomType ? b.roomType.name : "Resort-Wide Buyout"}
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            b.roomType
+                              ? "bg-purple-100 text-purple-900 border border-purple-200"
+                              : "bg-amber-100 text-amber-900 border border-amber-300 font-bold"
+                          }`}
+                        >
+                          {b.roomType ? b.roomType.name : "Resort-Wide Buyout (All 76 Keys)"}
                         </span>
                       </div>
-                      <p className="text-stone-500 mt-0.5">{b.reason}</p>
+                      <p className="text-stone-600 mt-0.5">{b.reason}</p>
                     </div>
 
                     <button
-                      onClick={() => handleDeleteBlackout(b.id, b.date)}
-                      className="px-2.5 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition font-bold text-[11px] flex items-center gap-1"
+                      onClick={() =>
+                        setDeleteModal({
+                          isOpen: true,
+                          id: b.id,
+                          date: b.date,
+                          reason: b.reason,
+                          scopeName: b.roomType ? b.roomType.name : "Resort-Wide Buyout",
+                          submitting: false,
+                        })
+                      }
+                      className="px-2.5 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition font-bold text-[11px] flex items-center gap-1 border border-transparent hover:border-red-200"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Remove</span>
@@ -800,6 +1020,216 @@ export function RateAllotmentManager() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* CUSTOM LUXURY MODAL 1: SCHEDULE BLACKOUT (Replacing window.prompt)    */}
+      {/* ---------------------------------------------------------------------- */}
+      {blackoutModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-lg text-stone-900">
+                    Schedule Blackout Window
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Disable online direct booking for this date
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBlackoutModal((prev) => ({ ...prev, isOpen: false }))}
+                className="text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-stone-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scope & Date Preview Cards */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                <span className="text-[10px] uppercase font-bold text-stone-400 block">Stay Date</span>
+                <strong className="text-stone-900 font-mono text-sm block mt-0.5">
+                  {blackoutModal.date}
+                </strong>
+              </div>
+
+              <div className="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                <span className="text-[10px] uppercase font-bold text-stone-400 block">Applies To</span>
+                <strong className="text-stone-900 text-xs block mt-0.5 truncate">
+                  {blackoutModal.roomTypeName}
+                </strong>
+              </div>
+            </div>
+
+            {/* Real-World Conflict Notice in Modal */}
+            {blackoutModal.isChecking && (
+              <div className="text-xs text-stone-400 italic">Verifying availability and conflicts...</div>
+            )}
+
+            {blackoutModal.preconditions?.isResortWideBlocked && (
+              <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl space-y-2 text-xs text-amber-950">
+                <div className="flex items-center gap-2 font-bold text-amber-900">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Resort-Wide Blackout Already Active!</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  This date ({blackoutModal.date}) is already blocked for the entire resort under <strong>"{blackoutModal.preconditions.resortWideReason}"</strong>. All 76 rooms are already closed for online booking.
+                </p>
+                {blackoutModal.roomTypeId && (
+                  <p className="text-[11px] font-bold text-red-700 bg-red-50 p-2 rounded-lg border border-red-200">
+                    ✕ Redundant: You cannot block "{blackoutModal.roomTypeName}" separately when all rooms are already closed.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {blackoutModal.preconditions?.activeBookingsCount && blackoutModal.preconditions.activeBookingsCount > 0 ? (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-950 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-blue-900">
+                  <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>{blackoutModal.preconditions.activeBookingsCount} Active Reservation(s) on Date</span>
+                </div>
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  Notice: Booking <strong>{blackoutModal.preconditions.activeBookings.map(b => b.bookingNumber).join(", ")}</strong> is already confirmed on this date. Scheduling this blackout will stop all NEW online bookings.
+                </p>
+              </div>
+            ) : null}
+
+            {/* Reason Form */}
+            <form onSubmit={handleConfirmBlackoutModal} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-stone-700 font-bold mb-1.5">
+                  Reason for Blackout / Event Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Full Estate Wedding Buyout"
+                  value={blackoutModal.reason}
+                  onChange={(e) => setBlackoutModal((prev) => ({ ...prev, reason: e.target.value }))}
+                  className="w-full p-3 border border-stone-300 rounded-xl bg-stone-50 text-stone-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#384432]"
+                  autoFocus
+                />
+              </div>
+
+              {/* Suggestion Pills */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Full Estate Wedding Buyout",
+                  "Leadership Offsite Buyout",
+                  "Monsoon Deep Sanitization",
+                  "Plumbing Maintenance",
+                ].map((sug) => (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => setBlackoutModal((prev) => ({ ...prev, reason: sug }))}
+                    className="text-[10px] px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 transition"
+                  >
+                    + {sug}
+                  </button>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+                <button
+                  type="button"
+                  onClick={() => setBlackoutModal((prev) => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2.5 border border-stone-200 rounded-xl text-stone-700 font-semibold hover:bg-stone-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={Boolean(blackoutModal.submitting || (blackoutModal.roomTypeId && blackoutModal.preconditions?.isResortWideBlocked))}
+                  className="px-6 py-2.5 bg-[#384432] hover:bg-[#283224] text-white rounded-xl font-bold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {blackoutModal.submitting
+                    ? "Saving..."
+                    : blackoutModal.roomTypeId && blackoutModal.preconditions?.isResortWideBlocked
+                    ? "Cannot Block (Already Resort-Wide)"
+                    : "Confirm Blackout"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* CUSTOM LUXURY MODAL 2: DELETE BLACKOUT (Replacing window.confirm)      */}
+      {/* ---------------------------------------------------------------------- */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2]">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 text-red-800 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-lg text-stone-900">
+                    Remove Blackout Window
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Re-open online direct booking
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteModal((prev) => ({ ...prev, isOpen: false }))}
+                className="text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-stone-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 text-xs space-y-2">
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-semibold">Date:</span>
+                <strong className="text-stone-900 font-mono">{deleteModal.date}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-semibold">Scope:</span>
+                <span className="text-stone-900 font-bold">{deleteModal.scopeName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-semibold">Event:</span>
+                <span className="text-stone-900 italic">"{deleteModal.reason}"</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-stone-600 leading-relaxed">
+              Are you sure you want to remove this blackout? Guests browsing the website will immediately be able to book rooms on <strong>{deleteModal.date}</strong>.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-100">
+              <button
+                type="button"
+                onClick={() => setDeleteModal((prev) => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2.5 border border-stone-200 rounded-xl text-stone-700 font-semibold hover:bg-stone-50 transition text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteBlackout}
+                disabled={deleteModal.submitting}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-sm transition text-xs disabled:opacity-50"
+              >
+                {deleteModal.submitting ? "Removing..." : "Yes, Re-open Inventory"}
+              </button>
+            </div>
           </div>
         </div>
       )}

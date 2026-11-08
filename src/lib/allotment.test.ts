@@ -33,11 +33,14 @@ describe("allotment.ts - Website Allotment & Overbooking Prevention Engine", () 
     heritageRoomId = heritage.id;
     villaRoomId = villa.id;
 
-    // Use test dates well within the 45-day seeded horizon (e.g., 5 to 7 days from now)
+    // Advance to a weekday Monday well clear of any immediate manual test blackouts
     const d1 = new Date();
-    d1.setDate(d1.getDate() + 5);
-    const d2 = new Date();
-    d2.setDate(d2.getDate() + 7);
+    const dayOfWeek = d1.getDay();
+    const daysUntilMonday = ((8 - dayOfWeek) % 7) || 7;
+    d1.setDate(d1.getDate() + daysUntilMonday + 7);
+
+    const d2 = new Date(d1);
+    d2.setDate(d1.getDate() + 2); // Mon -> Wed (2 weekday nights)
 
     testCheckIn = d1.toISOString().split("T")[0];
     testCheckOut = d2.toISOString().split("T")[0];
