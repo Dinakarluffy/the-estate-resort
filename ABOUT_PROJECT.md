@@ -778,6 +778,15 @@ A dedicated Vitest integration suite with 12 comprehensive test cases verifying 
   2. **Frontend Inline Editor Protection (`RateAllotmentManager.tsx`)**: `InlineAllotmentInput` now enforces `maxAllowed={selectedMatrix.roomType.totalKeys}` and displays an instant in-place tooltip banner (`⚠️ Max 32 keys (Total resort capacity for Planter's Heritage Room)`) blocking invalid submissions.
 * **Automated Verification**: Added dedicated Vitest test case verifying physical key ceiling rejection. All 144 unit & integration tests pass (100% green).
 
+#### 8. Real-World Operational Gaps Solved in Phase 6: Sent Enquiry Protection (Option A — Read-Only on Record with Revision Mode)
+
+* **Sent Quotation Integrity**: Once an enquiry is dispatched (`status === "SENT"`), the reply text represents the legally binding and official rate quotation sent to the guest. It should not remain open for accidental typing.
+* **Option A Architecture (`UnifiedEnquiryInbox.tsx`)**:
+  1. **Clean Read-Only on Record View**: The reply container displays with a green verification badge:
+     `✅ Official Quotation Dispatched to Guest (Sent on Record) • ✓ SLA Resolved`.
+  2. **Dedicated Follow-Up Action**: Displays **`💬 Follow-Up on WhatsApp`** for rapid sales follow-ups without altering the sent quote.
+  3. **Controlled Revision Mode**: If a client requests a quote update (e.g. changing guest count from 200 to 220), staff clicks **`✏️ Revise Quotation`**. This cleanly unlocks the editor with **`Save & Re-Send Reply`**, **`Save & WhatsApp Revision`**, and **`Cancel Revision`** (which safely returns to the locked view without modifying the original quotation).
+
 
 
 

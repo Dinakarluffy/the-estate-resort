@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Plus,
   X,
+  Lock,
 } from "lucide-react";
 
 interface EnquiryItem {
@@ -61,6 +62,7 @@ export function UnifiedEnquiryInbox() {
   const [draftText, setDraftText] = useState("");
   const [noteText, setNoteText] = useState("");
   const [isEditingDraft, setIsEditingDraft] = useState(false);
+  const [isRevisingSentQuote, setIsRevisingSentQuote] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -103,6 +105,7 @@ export function UnifiedEnquiryInbox() {
       setDraftText(selectedEnquiry.draftReply || "");
       setNoteText(selectedEnquiry.internalNotes || "");
       setIsEditingDraft(false);
+      setIsRevisingSentQuote(false);
     }
   }, [selectedEnquiry?.id]);
 
@@ -116,6 +119,7 @@ export function UnifiedEnquiryInbox() {
     setDraftText(enquiry.draftReply || "");
     setNoteText(enquiry.internalNotes || "");
     setIsEditingDraft(false);
+    setIsRevisingSentQuote(false);
   };
 
   // Human-in-the-Loop: Approve & Send
@@ -135,6 +139,10 @@ export function UnifiedEnquiryInbox() {
       if (!res.ok) throw new Error(data.error || "Failed to approve and send");
 
       showToast("success", `Reply approved & dispatched for ${selectedEnquiry.enquiryNumber}`);
+      setIsRevisingSentQuote(false);
+      setIsEditingDraft(false);
+      setIsRevisingSentQuote(false);
+      setIsEditingDraft(false);
       setSelectedEnquiry(data.enquiry);
       fetchEnquiries();
     } catch (err: any) {
@@ -193,6 +201,8 @@ export function UnifiedEnquiryInbox() {
         );
       }
 
+      setIsRevisingSentQuote(false);
+      setIsEditingDraft(false);
       setSelectedEnquiry(data.enquiry);
       fetchEnquiries();
     } catch (err: any) {
@@ -292,6 +302,8 @@ export function UnifiedEnquiryInbox() {
       if (!res.ok) throw new Error(data.error || "Failed to reroute enquiry");
 
       showToast("success", `Re-routed ${selectedEnquiry.enquiryNumber} to ${newCategory}`);
+      setIsRevisingSentQuote(false);
+      setIsEditingDraft(false);
       setSelectedEnquiry(data.enquiry);
       fetchEnquiries();
     } catch (err: any) {
@@ -345,6 +357,8 @@ export function UnifiedEnquiryInbox() {
       if (!res.ok) throw new Error(data.error || "Failed to save internal notes");
 
       showToast("success", `Internal notes saved for ${selectedEnquiry.enquiryNumber}`);
+      setIsRevisingSentQuote(false);
+      setIsEditingDraft(false);
       setSelectedEnquiry(data.enquiry);
       fetchEnquiries();
     } catch (err: any) {
@@ -376,6 +390,8 @@ export function UnifiedEnquiryInbox() {
           ? `Enquiry ${selectedEnquiry.enquiryNumber} moved to Archive`
           : `Enquiry ${selectedEnquiry.enquiryNumber} restored to Active Inbox`
       );
+      setIsRevisingSentQuote(false);
+      setIsEditingDraft(false);
       setSelectedEnquiry(data.enquiry);
       fetchEnquiries();
     } catch (err: any) {
@@ -1251,70 +1267,174 @@ export function UnifiedEnquiryInbox() {
                 </div>
               </div>
 
-              {/* Editable Draft Quotation / Reply */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                    Rate-Grounded Draft Reply (Editable)
-                  </span>
-                  <span className="text-[11px] text-stone-500 font-mono">
-                    Pricing grounded in active resort tariffs
-                  </span>
-                </div>
-
-                <textarea
-                  rows={7}
-                  value={draftText}
-                  onChange={(e) => {
-                    setDraftText(e.target.value);
-                    setIsEditingDraft(true);
-                  }}
-                  className="w-full p-4 border border-stone-300 rounded-xl text-xs text-stone-900 font-sans leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#384432] bg-white shadow-xs"
-                  placeholder="AI-generated draft reply..."
-                />
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                  <div className="text-[11px] text-stone-500 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Human Approval Required • AI Never Sends Automatically</span>
+              {/* Quotation / Reply Section (Option A: Clean Read-Only for SENT leads with Revision Toggle) */}
+              {selectedEnquiry.status === "SENT" && !isRevisingSentQuote ? (
+                /* READ-ONLY SENT RECORD VIEW */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      Official Quotation Dispatched to Guest (Sent on Record)
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                      ✓ SLA Resolved
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {isEditingDraft && (
+                  {/* Clean Read-Only Quotation Container */}
+                  <div className="p-4 bg-emerald-50/30 border border-emerald-200/80 rounded-xl text-xs text-stone-800 font-sans leading-relaxed whitespace-pre-wrap shadow-2xs">
+                    {draftText || selectedEnquiry.draftReply || "No quotation text recorded."}
+                  </div>
+
+                  {/* Sent Actions: Follow-Up & Revision */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                    <div className="text-[11px] text-stone-500 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-stone-400" />
+                      <span>Quotation locked on record • Use options to follow up or revise</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={handleSaveDraft}
+                        onClick={handleApproveAndWhatsApp}
                         disabled={actionLoading}
-                        className="px-4 py-2 border border-stone-300 rounded-xl text-xs font-bold text-stone-700 hover:bg-stone-50 transition"
+                        className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                        title="Open WhatsApp Web to chat or follow up with guest"
                       >
-                        Save Edits
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>{selectedEnquiry.guestPhone ? "Follow-Up on WhatsApp" : "WhatsApp Guest (Add #)"}</span>
                       </button>
-                    )}
 
-                    <button
-                      onClick={handleApproveAndWhatsApp}
-                      disabled={actionLoading}
-                      className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                      title={
-                        selectedEnquiry.guestPhone
-                          ? "Approve reply, log as SENT in database, and launch WhatsApp Web"
-                          : "This enquiry has no phone number. Click to enter a phone number and launch WhatsApp Web"
-                      }
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>{selectedEnquiry.guestPhone ? "Approve & WhatsApp" : "Approve & WhatsApp (Add #)"}</span>
-                    </button>
-
-                    <button
-                      onClick={handleApproveAndSend}
-                      disabled={actionLoading}
-                      className="px-5 py-2.5 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>{selectedEnquiry.status === "SENT" ? "Re-Send Reply" : "Approve & Send Reply"}</span>
-                    </button>
+                      <button
+                        onClick={() => setIsRevisingSentQuote(true)}
+                        className="px-4 py-2 bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                        title="Re-open quotation for revision"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-stone-600" />
+                        <span>Revise Quotation</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : selectedEnquiry.status === "SENT" && isRevisingSentQuote ? (
+                /* REVISION MODE FOR SENT ENQUIRY */
+                <div className="space-y-3 p-4 bg-amber-50/50 border border-amber-200 rounded-2xl animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                      Revising Dispatched Quotation
+                    </span>
+                    <span className="text-[10px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded font-bold">
+                      Revision Mode
+                    </span>
+                  </div>
+
+                  <textarea
+                    rows={7}
+                    value={draftText}
+                    onChange={(e) => setDraftText(e.target.value)}
+                    className="w-full p-4 border border-amber-300 rounded-xl text-xs text-stone-900 font-sans leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-700 bg-white shadow-xs"
+                    placeholder="Modify quotation details..."
+                    autoFocus
+                  />
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                    <button
+                      onClick={() => {
+                        setDraftText(selectedEnquiry.draftReply || "");
+                        setIsRevisingSentQuote(false);
+                      }}
+                      className="px-3.5 py-1.5 border border-stone-300 text-stone-600 hover:bg-stone-100 rounded-xl text-xs font-semibold transition"
+                    >
+                      Cancel Revision
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleApproveAndWhatsApp}
+                        disabled={actionLoading}
+                        className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Save & WhatsApp Revision</span>
+                      </button>
+
+                      <button
+                        onClick={handleApproveAndSend}
+                        disabled={actionLoading}
+                        className="px-5 py-2 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs disabled:opacity-50"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Save & Re-Send Reply</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* STANDARD EDITABLE DRAFT VIEW (FOR NEW / REVIEWED) */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
+                      Rate-Grounded Draft Reply (Editable)
+                    </span>
+                    <span className="text-[11px] text-stone-500 font-mono">
+                      Pricing grounded in active resort tariffs
+                    </span>
+                  </div>
+
+                  <textarea
+                    rows={7}
+                    value={draftText}
+                    onChange={(e) => {
+                      setDraftText(e.target.value);
+                      setIsEditingDraft(true);
+                    }}
+                    className="w-full p-4 border border-stone-300 rounded-xl text-xs text-stone-900 font-sans leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#384432] bg-white shadow-xs"
+                    placeholder="AI-generated draft reply..."
+                  />
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                    <div className="text-[11px] text-stone-500 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Human Approval Required • AI Never Sends Automatically</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isEditingDraft && (
+                        <button
+                          onClick={handleSaveDraft}
+                          disabled={actionLoading}
+                          className="px-4 py-2 border border-stone-300 rounded-xl text-xs font-bold text-stone-700 hover:bg-stone-50 transition"
+                        >
+                          Save Edits
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleApproveAndWhatsApp}
+                        disabled={actionLoading}
+                        className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                        title={
+                          selectedEnquiry.guestPhone
+                            ? "Approve reply, log as SENT in database, and launch WhatsApp Web"
+                            : "This enquiry has no phone number. Click to enter a phone number and launch WhatsApp Web"
+                        }
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>{selectedEnquiry.guestPhone ? "Approve & WhatsApp" : "Approve & WhatsApp (Add #)"}</span>
+                      </button>
+
+                      <button
+                        onClick={handleApproveAndSend}
+                        disabled={actionLoading}
+                        className="px-5 py-2.5 bg-[#384432] hover:bg-[#283224] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Approve & Send Reply</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Private Staff & GM Collaboration Notes Section */}
               <div className="border-t border-stone-200 pt-5 space-y-2">
