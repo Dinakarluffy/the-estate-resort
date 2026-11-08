@@ -515,12 +515,15 @@ The platform was built with a strict **hospitality-first architecture** conformi
 | **20. Cryptic Raw Elapsed Minutes (`2740m`)** | Staff sees `2740m • SLA Breached` and gets confused thinking it's an error code or raw timestamp. | Added `formatSlaDuration` converting raw minutes into human-readable units (`14m`, `2h 15m`, `1d 21h • SLA Breached`). |
 | **21. Multiple Submissions / Lead Flooding** | Guest submits duplicate enquiries within 24 hours; two staff members send conflicting quotes. | Duplicate detector matches phone/email within 24h window and flags cards with a prominent amber duplicate warning banner. |
 | **22. Inconsistent Header Navigation Across Views** | Different pages showed divergent links (`My Stays` vs `My Bookings`, missing `Weddings & Events`, plain text user names). | Extracted unified `<Navbar />` component with Next.js `usePathname()` active highlighting and standard luxury user pill. |
+| **23. Cold-Start Empty Database for Reviewers** | Reviewer opens app fresh; has 0 arrivals, 0 departures, 0 in-house stays, and cannot test front desk operations without manual setup. | Master dynamic seed (`prisma/seed.js`) automatically seeds relative to current execution date: today's arrival, today's departure, in-house stay, future stay, and cancelled stay. |
+| **24. Seeded Booking Allotment Desync** | Seeding database bookings without incrementing allotment causes discrepancy between reservations and available keys. | Seed script loops through stay dates of all active bookings and atomically increments `bookedCount` in the allotment table. |
 
 ---
 
 ## 4. Test Verification & Quality Metrics
 
-* **131 Unit & Integration Tests Passing (100% Green)**:
+* **143 Unit & Integration Tests Passing across 12 Test Files (100% Green)**:
+  * `integration.test.ts` (12 tests): Master Phase 6 end-to-end integration (Auth -> Catalog -> Rates -> Atomic Allotment -> Promo Capping -> Front Desk Lifecycle -> Stay Extension -> Cancellation -> AI Enquiry -> PMS CSV).
   * `rates.test.ts` (19 tests): Dynamic matrix, inline editing, allotment floors, blackout conflicts, promo CRUD.
   * `export.test.ts` (12 tests): RFC 4180 CSV escaping, SAC 996311 CGST/SGST split, UTF-8 BOM, `CHECKED_IN`/`CHECKED_OUT` status transitions.
   * `booking.test.ts` (12 tests): Multi-night checkout, GST calculation, atomic inventory decrements.
@@ -664,6 +667,89 @@ flowchart TD
 7. **Test Spam Archival & Pipeline CSV Export**:
    * For spam/unwanted leads, click **Archive Lead**. The card is safely removed from active sales views into the **🗄️ Archived** tab.
    * Click **Export CSV** in the top action bar: Downloads a clean 15-column sales pipeline file formatted for Microsoft Excel with UTF-8 BOM encoding.
+
+---
+
+### 🌟 Phase 6: System Integration, Master Dynamic Seed & End-to-End Operational Verification
+
+#### 1. Phase 6 Goals & Executive Summary
+Phase 6 represents the complete **synthesis and operational readiness** of the entire hospitality platform. It ensures that when any reviewer, hotel manager, or staff member opens the platform cold, **the system is 100% operational with realistic live data**, zero empty states, and every cross-module integration working cohesively.
+
+#### 2. Master Dynamic Seed Architecture (`prisma/seed.js`)
+Rather than relying on static, hardcoded past dates that would become stale, `prisma/seed.js` uses **relative dynamic date arithmetic** based on the exact moment the seed script runs:
+1. **Multi-Role User Accounts (10 Users)**:
+   * `guest@estate.com` (Priya Sharma, GUEST) — Password `demo1234`
+   * `staff@estate.com` (Karthik Rao, Reservations Staff) — Password `demo1234`
+   * `gm@estate.com` (Vikram Hegde, General Manager) — Password `demo1234`
+   * 7 Realistic staff and guest accounts for team management and permission testing.
+2. **76 Keys Across 3 Luxury Room Types**:
+   * *Planter's Heritage Room* (32 keys, base ₹6,500 $\rightarrow$ 12% GST)
+   * *Coffee Estate Luxury Suite* (32 keys, base ₹9,500 $\rightarrow$ 18% GST)
+   * *Misty Valley Pool Villa* (12 keys, base ₹16,000 $\rightarrow$ 18% GST)
+3. **50-Day Dynamic Rolling Inventory & Dynamic Pricing Matrix**:
+   * 50 days of rates spanning from 5 days in the past to 45 days into the future.
+   * Weekend surcharges (+20%) automatically calculated on Fridays and Saturdays.
+   * Allotments populated with default website quotas (8, 6, 3 keys).
+4. **Active & Expired Promo Codes**:
+   * `COFFEE10`: 10% discount, max cap ₹2,000, minimum spend ₹5,000, active.
+   * `MONSOON15`: 15% discount, max cap ₹3,500, minimum spend ₹8,000, active.
+   * `EXPIRED50`: 50% discount, expired date window (used to test validation error handling).
+5. **Real-World Blackout Dates**:
+   * Room-specific maintenance blackout on *Misty Valley Pool Villa* at day +7.
+   * Resort-wide destination wedding buyout at day +14 (all 76 keys blocked).
+6. **Full Operational Spectrum Bookings (6 Seeded Reservations)**:
+   * `EST-2026-8101`: `CHECKED_IN` in-house stay for `guest@estate.com` (staying from yesterday to tomorrow) $\rightarrow$ allows testing **Extend Stay** on `/my-bookings`.
+   * `EST-2026-8102`: `CONFIRMED` booking checking in **today** for Arun Patel $\rightarrow$ triggers **"Today's Arrivals: 1"** badge and tests **Check In** button at `/staff/bookings`.
+   * `EST-2026-8103`: `CHECKED_IN` booking departing **today** for Deepa Nair $\rightarrow$ triggers **"Today's Departures: 1"** badge and tests **Check Out** button at `/staff/bookings`.
+   * `EST-2026-8104`: `CONFIRMED` future booking for `guest@estate.com` (days +5 to +7) $\rightarrow$ tests **48-Hour Free Cancellation** and inventory rollback.
+   * `EST-2026-8105`: `CANCELLED` & `REFUNDED` stay for Manish Joshi $\rightarrow$ tests refund tags and modification locks.
+   * `EST-2026-8106`: `CHECKED_OUT` completed past stay for `guest@estate.com` $\rightarrow$ tests historical invoice voucher viewing.
+7. **Atomic Allotment Synchronization Invariant**:
+   * For every non-cancelled booking seeded, the script dynamically increments `bookedCount` across every stay date in the `Allotment` table, ensuring inventory equations strictly hold:
+     $$\text{availableKeys}_d = \text{websiteAllotment}_d - \text{bookedCount}_d$$
+
+#### 3. Master End-to-End System Integration Suite (`src/lib/integration.test.ts`)
+A dedicated Vitest integration suite with 12 comprehensive test cases verifying the complete cross-module pipeline:
+1. **Authentication & Session Issuance**: Bcrypt password verification, edge JWT token creation, and payload decoding.
+2. **Statutory Indian GST Calculations**: Boundary verification for 12% (<= ₹7,500) vs 18% (> ₹7,500).
+3. **Promo Engine & Revenue Protection**: Percentage deduction and strict enforcement of max discount cap on luxury stays.
+4. **Atomic Booking & Allotment Protection**: Booking creation within Prisma transaction, unique reference generation, and atomic inventory decrement.
+5. **Front Desk Check-In & Check-Out State Machine**: `CONFIRMED` $\rightarrow$ `CHECKED_IN` $\rightarrow$ `CHECKED_OUT`.
+6. **PMS CSV Export**: RFC 4180 compliance, 21 standardized columns, SAC 996311, itemized CGST/SGST, and `\uFEFF` UTF-8 BOM encoding for Microsoft Excel.
+7. **Guest Self-Service Cancellation & Inventory Restoration**: Cancellation within free window, refund status flip, and atomic allotment increment.
+8. **Multi-Channel AI Enquiry Pipeline**: Ingestion $\rightarrow$ zero-hallucination rate grounding $\rightarrow$ human-in-the-loop review (`NEW` $\rightarrow$ `REVIEWED`) $\rightarrow$ missing phone prompt $\rightarrow$ dispatch (`SENT`).
+
+#### 4. Step-by-Step Reviewer Guide: Testing the Entire Platform Cold (Phase 6)
+
+1. **Seed the Database Cold**:
+   ```bash
+   node prisma/seed.js
+   ```
+2. **Test Guest Journey (`guest@estate.com` / `demo1234`)**:
+   * Navigate to `/login` and click **1-Click Guest Demo**.
+   * Visit `/rooms`: Notice live available keys and high-resolution photo carousels.
+   * Click **Book Direct**: 3-step checkout with instant promo code (`COFFEE10`), GST calculation, and Razorpay test payment.
+   * Visit `/my-bookings`:
+     * Notice your active in-house stay (`EST-2026-8101`): Click **Extend Stay** to test dynamic forward inventory reservation.
+     * Notice your future stay (`EST-2026-8104`): Click **Cancel Stay** to test 48-hour free cancellation and observe allotment restoration.
+3. **Test Front Desk Operations (`staff@estate.com` / `demo1234`)**:
+   * Log in as Staff and navigate to `/staff/bookings`.
+   * Click the **Today's Arrivals (1)** ribbon: Click **Check In** on Arun Patel. Status turns blue `CHECKED IN`.
+   * Click the **Today's Departures (1)** ribbon: Click **Check Out** on Deepa Nair. Status turns purple `CHECKED OUT`.
+   * Click **Export CSV (PMS)**: Downloads official UTF-8 BOM file for Excel.
+   * Click **Print Manifest**: Prepares clean morning housekeeping roster.
+4. **Test AI Enquiry Inbox (`staff@estate.com` / `demo1234`)**:
+   * Navigate to `/staff/dashboard`.
+   * Filter by categories: `Weddings`, `Corporate`, `Rooms`, `Complaints`, `GM Review Queue`.
+   * Filter by horizontal status: `All Statuses`, `New`, `Reviewed`, `Sent`.
+   * Edit a quote to see status flip to `REVIEWED`.
+   * Dispatch via WhatsApp Web with in-app phone capture.
+5. **Test GM Control Panel (`gm@estate.com` / `demo1234`)**:
+   * Log in as GM and navigate to `/admin/rates`.
+   * View the 45-day rolling matrix: inspect +20% weekend surcharges and red blackout badges.
+   * Inline edit any room rate or allotment cell.
+   * Test blackout collision warnings and promo code creation with revenue caps.
+
 
 
 
