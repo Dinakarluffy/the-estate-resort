@@ -556,23 +556,23 @@ export function RateAllotmentManager() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-stone-200 pb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 pb-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto">
           <button
             onClick={() => setActiveTab("rates")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === "rates"
                 ? "bg-[#384432] text-white shadow-sm"
                 : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span>45-Day Rate & Allotment Grid</span>
+            <span>45-Day Rate Grid</span>
           </button>
 
           <button
             onClick={() => setActiveTab("blackouts")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === "blackouts"
                 ? "bg-[#384432] text-white shadow-sm"
                 : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
@@ -584,7 +584,7 @@ export function RateAllotmentManager() {
 
           <button
             onClick={() => setActiveTab("promos")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === "promos"
                 ? "bg-[#384432] text-white shadow-sm"
                 : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
@@ -595,11 +595,11 @@ export function RateAllotmentManager() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
           {activeTab === "rates" && (
             <button
               onClick={() => setShowBulkModal(true)}
-              className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
             >
               <TrendingUp className="w-3.5 h-3.5" />
               <span>Bulk Seasonal Surcharge</span>
@@ -608,7 +608,7 @@ export function RateAllotmentManager() {
           {activeTab === "promos" && (
             <button
               onClick={() => setShowPromoModal(true)}
-              className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Promo Voucher</span>
@@ -617,7 +617,7 @@ export function RateAllotmentManager() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-2 text-stone-500 hover:text-stone-800 bg-white border border-stone-200 rounded-xl transition"
+            className="p-2 text-stone-500 hover:text-stone-800 bg-white border border-stone-200 rounded-xl transition active:scale-[0.98]"
             title="Refresh Allotment Matrix"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -631,12 +631,12 @@ export function RateAllotmentManager() {
       {activeTab === "rates" && (
         <div className="space-y-6">
           {/* Room Type Selector Pills */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 sm:flex-wrap scrollbar-none">
             {matrix.map((m, idx) => (
               <button
                 key={m.roomType.id}
                 onClick={() => setSelectedRoomIndex(idx)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2.5 border ${
+                className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 sm:gap-2.5 border shrink-0 ${
                   selectedRoomIndex === idx
                     ? "bg-[#e8ece6] text-[#222c1d] border-[#384432] shadow-sm ring-1 ring-[#384432]"
                     : "bg-white text-stone-700 border-stone-200 hover:bg-stone-50"
@@ -644,7 +644,7 @@ export function RateAllotmentManager() {
               >
                 <span>{m.roomType.name}</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 font-mono text-stone-600">
-                  {m.roomType.totalKeys} keys total • {m.roomType.defaultAllotment} direct
+                  {m.roomType.totalKeys} keys • {m.roomType.defaultAllotment} direct
                 </span>
               </button>
             ))}
@@ -677,7 +677,7 @@ export function RateAllotmentManager() {
           {selectedMatrix && (
             <div className="bg-white border border-[#ebded2] rounded-2xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-left text-xs border-collapse min-w-[700px]">
                   <thead className="bg-[#faf7f2] border-b border-[#ebded2] sticky top-0 z-20 text-stone-700 font-bold uppercase tracking-wider text-[11px]">
                     <tr>
                       <th className="py-3.5 px-4">Stay Date</th>
@@ -1017,7 +1017,8 @@ export function RateAllotmentManager() {
           </div>
 
           <div className="bg-white border border-[#ebded2] rounded-2xl shadow-sm overflow-hidden">
-            <table className="w-full text-left text-xs border-collapse">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[720px]">
               <thead className="bg-[#faf7f2] border-b border-[#ebded2] text-stone-700 font-bold uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="py-3.5 px-4">Voucher Code</th>
@@ -1094,6 +1095,7 @@ export function RateAllotmentManager() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -1102,8 +1104,8 @@ export function RateAllotmentManager() {
       {/* CUSTOM LUXURY MODAL 1: SCHEDULE BLACKOUT (Replacing window.prompt)    */}
       {/* ---------------------------------------------------------------------- */}
       {blackoutModal.isOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2]">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2] max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-stone-100 pb-4">
               <div className="flex items-center gap-3">
@@ -1244,8 +1246,8 @@ export function RateAllotmentManager() {
       {/* CUSTOM LUXURY MODAL 2: DELETE BLACKOUT (Replacing window.confirm)      */}
       {/* ---------------------------------------------------------------------- */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2]">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-stone-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-red-100 text-red-800 flex items-center justify-center">
@@ -1312,8 +1314,8 @@ export function RateAllotmentManager() {
       {/* CUSTOM LUXURY MODAL 3: DELETE PROMO CODE                               */}
       {/* ---------------------------------------------------------------------- */}
       {deletePromoModal.isOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2]">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-stone-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center">
@@ -1393,8 +1395,8 @@ export function RateAllotmentManager() {
       {/* BULK SEASONAL RATE MODAL                                              */}
       {/* ---------------------------------------------------------------------- */}
       {showBulkModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-xl space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto border border-[#ebded2]">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <h3 className="font-serif font-bold text-lg text-stone-900 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-amber-700" />
@@ -1490,8 +1492,8 @@ export function RateAllotmentManager() {
       {/* NEW PROMO CODE MODAL                                                   */}
       {/* ---------------------------------------------------------------------- */}
       {showPromoModal && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-xl space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto border border-[#ebded2]">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <h3 className="font-serif font-bold text-lg text-stone-900 flex items-center gap-2">
                 <Tag className="w-5 h-5 text-emerald-700" />

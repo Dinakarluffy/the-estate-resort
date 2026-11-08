@@ -289,7 +289,7 @@ export function StaffBookingsManager() {
           <span className="text-[10px] text-purple-600 mt-0.5 block">Checked Out</span>
         </div>
 
-        <div className="bg-white border border-[#ebded2] p-4 rounded-2xl shadow-sm">
+        <div className="bg-white border border-[#ebded2] p-4 rounded-2xl shadow-sm col-span-2 sm:col-span-1">
           <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider block">
             Cancelled
           </span>
@@ -315,7 +315,7 @@ export function StaffBookingsManager() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full sm:w-auto shrink-0">
             <button
               onClick={fetchBookings}
               disabled={loading}
@@ -412,7 +412,7 @@ export function StaffBookingsManager() {
       {/* Bookings Roster Table */}
       <div className="bg-white border border-[#ebded2] rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-xs border-collapse min-w-[800px]">
             <thead className="bg-[#faf7f2] border-b border-[#ebded2] text-stone-700 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-3.5 px-4">Booking Ref</th>
@@ -571,8 +571,8 @@ export function StaffBookingsManager() {
       {/* CUSTOM LUXURY MODAL: CHECK-IN / CHECK-OUT OPERATIONAL LIFECYCLE        */}
       {/* ---------------------------------------------------------------------- */}
       {statusModal.isOpen && statusModal.booking && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 print:hidden">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2]">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 print:hidden">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2] max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-stone-100 pb-4">
               <div className="flex items-center gap-3">
