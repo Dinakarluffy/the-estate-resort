@@ -136,6 +136,39 @@ export function UnifiedEnquiryInbox() {
     }
   };
 
+  // Human-in-the-Loop: Approve & Dispatch via WhatsApp Web
+  const handleApproveAndWhatsApp = async () => {
+    if (!selectedEnquiry) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/staff/enquiries/${selectedEnquiry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "approveAndSend",
+          draftReply: draftText,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to approve enquiry");
+
+      // Open WhatsApp Web with cleaned digits
+      if (selectedEnquiry.guestPhone) {
+        const cleanPhone = selectedEnquiry.guestPhone.replace(/\D/g, "");
+        const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(draftText)}`;
+        window.open(waUrl, "_blank");
+      }
+
+      showToast("success", `Approved & WhatsApp Web opened for ${selectedEnquiry.enquiryNumber}`);
+      setSelectedEnquiry(data.enquiry);
+      fetchEnquiries();
+    } catch (err: any) {
+      showToast("error", err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // 1-Click Re-Route Category
   const handleReroute = async (newCategory: EnquiryItem["category"]) => {
     if (!selectedEnquiry) return;
@@ -892,6 +925,18 @@ export function UnifiedEnquiryInbox() {
                         className="px-4 py-2 border border-stone-300 rounded-xl text-xs font-bold text-stone-700 hover:bg-stone-50 transition"
                       >
                         Save Edits
+                      </button>
+                    )}
+
+                    {selectedEnquiry.guestPhone && (
+                      <button
+                        onClick={handleApproveAndWhatsApp}
+                        disabled={actionLoading}
+                        className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                        title="Approve reply, log as SENT in database, and launch WhatsApp Web"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Approve & WhatsApp</span>
                       </button>
                     )}
 
