@@ -155,7 +155,8 @@ export function generatePmsCsv(bookings: Parameters<typeof formatBookingToExport
     lines.push(line);
   }
 
-  return lines.join("\r\n");
+  // Prepend UTF-8 BOM (\uFEFF) for flawless Excel on Windows parsing
+  return "\uFEFF" + lines.join("\r\n");
 }
 
 /**
@@ -223,7 +224,7 @@ export async function getBookingsForExport(filters?: {
  */
 export async function updateBookingOperationalStatus(
   idOrBookingNumber: string,
-  newStatus: "CONFIRMED" | "CHECKED_IN" | "CANCELLED"
+  newStatus: "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED"
 ) {
   const existing = await prisma.booking.findFirst({
     where: {

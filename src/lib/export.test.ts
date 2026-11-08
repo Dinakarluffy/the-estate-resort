@@ -103,9 +103,9 @@ describe("export.ts - Hotel PMS CSV Exporter & Front Desk Operations", () => {
       expect(dataLine).toContain("13104.00");
     });
 
-    it("generates only header row when bookings array is empty", () => {
+    it("generates only header row when bookings array is empty with UTF-8 BOM", () => {
       const csv = generatePmsCsv([]);
-      expect(csv).toBe(PMS_CSV_HEADERS.map(escapeCsvField).join(","));
+      expect(csv).toBe("\uFEFF" + PMS_CSV_HEADERS.map(escapeCsvField).join(","));
     });
   });
 
@@ -155,14 +155,17 @@ describe("export.ts - Hotel PMS CSV Exporter & Front Desk Operations", () => {
       expect(results.some((b) => b.id === testBookingId)).toBe(true);
     });
 
-    it("updates booking operational status to CHECKED_IN", async () => {
-      const updated = await updateBookingOperationalStatus(testBookingId, "CHECKED_IN");
-      expect(updated.status).toBe("CHECKED_IN");
+    it("updates booking operational status to CHECKED_IN and CHECKED_OUT", async () => {
+      const checkedIn = await updateBookingOperationalStatus(testBookingId, "CHECKED_IN");
+      expect(checkedIn.status).toBe("CHECKED_IN");
+
+      const checkedOut = await updateBookingOperationalStatus(testBookingId, "CHECKED_OUT");
+      expect(checkedOut.status).toBe("CHECKED_OUT");
 
       const fetched = await prisma.booking.findUnique({
         where: { id: testBookingId },
       });
-      expect(fetched?.status).toBe("CHECKED_IN");
+      expect(fetched?.status).toBe("CHECKED_OUT");
     });
 
     it("throws error for non-existent booking status update", async () => {

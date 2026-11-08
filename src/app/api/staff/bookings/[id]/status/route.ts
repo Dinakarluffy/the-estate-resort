@@ -27,8 +27,8 @@ export async function PATCH(
     const body = await req.json();
     const { status } = body;
 
-    if (!status || !["CONFIRMED", "CHECKED_IN", "CANCELLED"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status. Must be CONFIRMED, CHECKED_IN, or CANCELLED." }, { status: 400 });
+    if (!status || !["CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status. Must be CONFIRMED, CHECKED_IN, CHECKED_OUT, or CANCELLED." }, { status: 400 });
     }
 
     const updated = await updateBookingOperationalStatus(id, status);
