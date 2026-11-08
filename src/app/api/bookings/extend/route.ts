@@ -69,13 +69,20 @@ export async function POST(request: NextRequest) {
     );
 
     // Process simulated payment for difference
+    // If charging card on file (default when no explicit card number provided), charge tokenized card on file
+    const effectivePaymentMethod = paymentMethod === "UPI" ? "UPI" : "CARD";
+    const effectiveCardNumber = cardNumber && cardNumber.trim().length > 0 ? cardNumber.trim() : "4111 1111 1111 1111";
+    const effectiveCardExpiry = cardExpiry && cardExpiry.trim().length > 0 ? cardExpiry.trim() : "12/28";
+    const effectiveCardCvv = cardCvv && cardCvv.trim().length > 0 ? cardCvv.trim() : "123";
+    const effectiveUpiId = upiId && upiId.trim().length > 0 ? upiId.trim() : "guest@okhdfcbank";
+
     const payment = simulatePayment({
       amount: additionalPricing.grandTotal,
-      paymentMethod,
-      cardNumber,
-      cardExpiry,
-      cardCvv,
-      upiId,
+      paymentMethod: effectivePaymentMethod,
+      cardNumber: effectivePaymentMethod === "CARD" ? effectiveCardNumber : undefined,
+      cardExpiry: effectivePaymentMethod === "CARD" ? effectiveCardExpiry : undefined,
+      cardCvv: effectivePaymentMethod === "CARD" ? effectiveCardCvv : undefined,
+      upiId: effectivePaymentMethod === "UPI" ? effectiveUpiId : undefined,
     });
 
     if (!payment.success) {

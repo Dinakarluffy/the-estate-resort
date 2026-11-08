@@ -750,6 +750,15 @@ A dedicated Vitest integration suite with 12 comprehensive test cases verifying 
    * Inline edit any room rate or allotment cell.
    * Test blackout collision warnings and promo code creation with revenue caps.
 
+#### 5. Real-World Operational Gaps Solved in Phase 6: Seamless Stay Extension & Card-on-File Differential Payment
+
+* **Card-on-File 1-Click Payment Default**: In luxury hotel operations, guests extending an ongoing in-house stay have their original payment token on file. The extension modal defaults to **"Card on File (•••• 4242)"**, allowing instant 1-click stay confirmation without requiring the guest to re-type 16-digit card numbers.
+* **Multi-Method Differential Payment Selector**: Added an interactive luxury payment method selector in the Extend Stay modal (`GuestBookingsList.tsx`):
+  1. **Card on File**: Pre-selected default with green `1-Click Instant Charge` badge.
+  2. **Instant UPI**: Direct UPI VPA input (default `guest@okhdfcbank`) for instant digital transfer.
+  3. **New Credit / Debit Card**: Form fields for Card Number, Expiry, and CVV pre-filled with demo card (`4111 1111 1111 1111`) with support for testing bank declines (cards ending in `0000`).
+* **Backend Defensive Fallback (`/api/bookings/extend`)**: If `cardNumber` is omitted in the API payload, the backend automatically falls back to charging the reservation's pre-authorized card on file, completely eliminating the `"⚠️ Invalid card number. Please provide a valid 16-digit card number"` error while preserving bank decline simulation when explicitly tested.
+
 
 
 

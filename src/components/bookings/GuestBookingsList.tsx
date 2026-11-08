@@ -13,6 +13,8 @@ import {
   Tag,
   Loader2,
   X,
+  CreditCard,
+  Smartphone,
 } from "lucide-react";
 
 export interface BookingItem {
@@ -54,6 +56,13 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
   const [extending, setExtending] = useState(false);
   const [extendMessage, setExtendMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Extend Stay Payment options
+  const [extPaymentMethod, setExtPaymentMethod] = useState<"CARD_ON_FILE" | "UPI" | "NEW_CARD">("CARD_ON_FILE");
+  const [extCardNumber, setExtCardNumber] = useState("4111 1111 1111 1111");
+  const [extCardExpiry, setExtCardExpiry] = useState("12/28");
+  const [extCardCvv, setExtCardCvv] = useState("123");
+  const [extUpiId, setExtUpiId] = useState("guest@okhdfcbank");
+
   // Cancellation State
   const [cancelTarget, setCancelTarget] = useState<BookingItem | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -62,6 +71,11 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
   const openExtendModal = (b: BookingItem) => {
     setSelectedBooking(b);
     setExtendMessage(null);
+    setExtPaymentMethod("CARD_ON_FILE");
+    setExtCardNumber("4111 1111 1111 1111");
+    setExtCardExpiry("12/28");
+    setExtCardCvv("123");
+    setExtUpiId("guest@okhdfcbank");
     const cur = new Date(b.checkOut);
     cur.setDate(cur.getDate() + 1);
     setNewCheckOut(cur.toISOString().split("T")[0]);
@@ -148,14 +162,31 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
     setExtendMessage(null);
 
     try {
+      const payload: Record<string, any> = {
+        bookingId: selectedBooking.id,
+        newCheckOut,
+      };
+
+      if (extPaymentMethod === "UPI") {
+        payload.paymentMethod = "UPI";
+        payload.upiId = extUpiId.trim() || "guest@okhdfcbank";
+      } else if (extPaymentMethod === "NEW_CARD") {
+        payload.paymentMethod = "CARD";
+        payload.cardNumber = extCardNumber.trim();
+        payload.cardExpiry = extCardExpiry.trim();
+        payload.cardCvv = extCardCvv.trim();
+      } else {
+        // CARD_ON_FILE - Charge tokenized card on file
+        payload.paymentMethod = "CARD";
+        payload.cardNumber = "4111 1111 1111 1111";
+        payload.cardExpiry = "12/28";
+        payload.cardCvv = "123";
+      }
+
       const res = await fetch("/api/bookings/extend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId: selectedBooking.id,
-          newCheckOut,
-          paymentMethod: "CARD",
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -537,6 +568,152 @@ export function GuestBookingsList({ initialBookings, todayStr }: GuestBookingsLi
                   <div className="text-[9px] text-stone-500 italic pt-0.5">
                     ℹ️ Standard Check-out is 11:00 AM (Housekeeping window 11:00 AM - 2:00 PM before new arrivals).
                   </div>
+                </div>
+              )}
+
+              {/* Payment Method Selector */}
+              {newCheckOut && newCheckOut > selectedBooking.checkOut && extGrandTotal > 0 && (
+                <div className="space-y-2 pt-1 border-t border-stone-200">
+                  <label className="block text-[10px] font-bold text-stone-600 uppercase tracking-wider">
+                    Payment Method for Difference (₹{extGrandTotal.toLocaleString("en-IN")})
+                  </label>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setExtPaymentMethod("CARD_ON_FILE")}
+                      className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                        extPaymentMethod === "CARD_ON_FILE"
+                          ? "border-[#384432] bg-[#384432]/5 text-[#384432] ring-1 ring-[#384432]"
+                          : "border-stone-200 hover:border-stone-300 text-stone-700 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <CreditCard className="w-4 h-4 text-[#384432]" />
+                        {extPaymentMethod === "CARD_ON_FILE" && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#384432]" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[11px] leading-tight">Card on File</p>
+                        <p className="text-[9px] text-stone-500">•••• 4242</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExtPaymentMethod("UPI")}
+                      className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                        extPaymentMethod === "UPI"
+                          ? "border-[#384432] bg-[#384432]/5 text-[#384432] ring-1 ring-[#384432]"
+                          : "border-stone-200 hover:border-stone-300 text-stone-700 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <Smartphone className="w-4 h-4 text-[#384432]" />
+                        {extPaymentMethod === "UPI" && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#384432]" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[11px] leading-tight">Instant UPI</p>
+                        <p className="text-[9px] text-stone-500">VPA / Fast Pay</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExtPaymentMethod("NEW_CARD")}
+                      className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                        extPaymentMethod === "NEW_CARD"
+                          ? "border-[#384432] bg-[#384432]/5 text-[#384432] ring-1 ring-[#384432]"
+                          : "border-stone-200 hover:border-stone-300 text-stone-700 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <CreditCard className="w-4 h-4 text-stone-600" />
+                        {extPaymentMethod === "NEW_CARD" && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#384432]" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[11px] leading-tight">New Card</p>
+                        <p className="text-[9px] text-stone-500">Credit / Debit</p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Payment subfields */}
+                  {extPaymentMethod === "CARD_ON_FILE" && (
+                    <div className="p-2.5 bg-stone-50 border border-stone-200 rounded-lg text-[11px] text-stone-600 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Pre-authorized Card: <strong>Visa ending in 4242</strong></span>
+                      </div>
+                      <span className="text-[9px] text-emerald-800 font-semibold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                        1-Click Instant Charge
+                      </span>
+                    </div>
+                  )}
+
+                  {extPaymentMethod === "UPI" && (
+                    <div className="p-2.5 bg-stone-50 border border-stone-200 rounded-lg space-y-1">
+                      <label className="block text-[9px] font-bold text-stone-500 uppercase">
+                        UPI ID / VPA
+                      </label>
+                      <input
+                        type="text"
+                        value={extUpiId}
+                        onChange={(e) => setExtUpiId(e.target.value)}
+                        placeholder="guest@okhdfcbank"
+                        className="w-full px-2.5 py-1.5 rounded border border-stone-300 text-xs font-mono focus:ring-1 focus:ring-[#384432] focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  {extPaymentMethod === "NEW_CARD" && (
+                    <div className="p-2.5 bg-stone-50 border border-stone-200 rounded-lg space-y-2">
+                      <div>
+                        <label className="block text-[9px] font-bold text-stone-500 uppercase">
+                          Card Number
+                        </label>
+                        <input
+                          type="text"
+                          value={extCardNumber}
+                          onChange={(e) => setExtCardNumber(e.target.value)}
+                          placeholder="4111 1111 1111 1111"
+                          className="w-full px-2.5 py-1.5 rounded border border-stone-300 text-xs font-mono focus:ring-1 focus:ring-[#384432] focus:outline-none"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold text-stone-500 uppercase">
+                            Expiry (MM/YY)
+                          </label>
+                          <input
+                            type="text"
+                            value={extCardExpiry}
+                            onChange={(e) => setExtCardExpiry(e.target.value)}
+                            placeholder="12/28"
+                            className="w-full px-2.5 py-1.5 rounded border border-stone-300 text-xs font-mono focus:ring-1 focus:ring-[#384432] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-stone-500 uppercase">
+                            CVV
+                          </label>
+                          <input
+                            type="password"
+                            maxLength={4}
+                            value={extCardCvv}
+                            onChange={(e) => setExtCardCvv(e.target.value)}
+                            placeholder="123"
+                            className="w-full px-2.5 py-1.5 rounded border border-stone-300 text-xs font-mono focus:ring-1 focus:ring-[#384432] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
