@@ -8,7 +8,18 @@ import { Coffee, ShieldCheck, User, Sparkles, AlertCircle, Eye, EyeOff } from "l
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromUrl = searchParams.get("from") || searchParams.get("redirect") || "/";
+  const rawFrom = searchParams.get("from") || searchParams.get("redirect") || "/";
+  let fromUrl = "/";
+  try {
+    fromUrl = decodeURIComponent(rawFrom);
+  } catch {
+    fromUrl = rawFrom;
+  }
+  // Sanitize fromUrl: prevent protocol-relative URLs or external redirects
+  if (!fromUrl.startsWith("/") || fromUrl.startsWith("//")) {
+    fromUrl = "/";
+  }
+
   const isBookingRedirect = fromUrl.includes("/book");
 
   const [email, setEmail] = useState("");
@@ -36,15 +47,35 @@ function LoginForm() {
         return;
       }
 
-      // Route based on role
+      // Determine safe redirect destination based on authenticated role
+      let targetUrl = "/";
+      const isTargetAdmin = fromUrl.startsWith("/admin");
+      const isTargetStaff = fromUrl.startsWith("/staff");
+      const isTargetRestrictedOrSelf =
+        fromUrl.startsWith("/unauthorized") ||
+        fromUrl.startsWith("/login") ||
+        fromUrl === "/";
+
       if (data.user.role === "GM") {
-        router.push(fromUrl !== "/" ? fromUrl : "/admin/dashboard");
+        targetUrl = !isTargetRestrictedOrSelf ? fromUrl : "/admin/dashboard";
       } else if (data.user.role === "STAFF") {
-        router.push(fromUrl !== "/" ? fromUrl : "/staff/dashboard");
+        // Staff cannot access /admin routes! Route to /staff/dashboard if target was admin
+        if (!isTargetRestrictedOrSelf && !isTargetAdmin) {
+          targetUrl = fromUrl;
+        } else {
+          targetUrl = "/staff/dashboard";
+        }
       } else {
-        router.push(fromUrl !== "/" ? fromUrl : "/");
+        // GUEST cannot access /admin or /staff routes!
+        if (!isTargetRestrictedOrSelf && !isTargetAdmin && !isTargetStaff) {
+          targetUrl = fromUrl;
+        } else {
+          targetUrl = "/";
+        }
       }
-      router.refresh();
+
+      // Full window navigation forces fresh HTTP request with new cookie and avoids stale Next.js client router cache
+      window.location.href = targetUrl;
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
       setLoading(false);

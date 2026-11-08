@@ -43,9 +43,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Successful registration & auto-login -> redirect home
-      router.push("/");
-      router.refresh();
+      // Successful registration & auto-login -> full navigation with new session
+      window.location.href = "/";
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
       setLoading(false);

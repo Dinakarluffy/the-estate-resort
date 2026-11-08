@@ -29,12 +29,16 @@ export async function middleware(request: NextRequest) {
 
   // Check Staff permission
   if (isStaffRoute && !canAccessStaffRoutes(user.role)) {
-    return NextResponse.redirect(new URL("/unauthorized", request.url));
+    const unauthorizedUrl = new URL("/unauthorized", request.url);
+    unauthorizedUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(unauthorizedUrl);
   }
 
   // Check GM permission
   if (isAdminRoute && !canAccessGmRoutes(user.role)) {
-    return NextResponse.redirect(new URL("/unauthorized", request.url));
+    const unauthorizedUrl = new URL("/unauthorized", request.url);
+    unauthorizedUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(unauthorizedUrl);
   }
 
   // Attach user headers for server components

@@ -759,6 +759,16 @@ A dedicated Vitest integration suite with 12 comprehensive test cases verifying 
   3. **New Credit / Debit Card**: Form fields for Card Number, Expiry, and CVV pre-filled with demo card (`4111 1111 1111 1111`) with support for testing bank declines (cards ending in `0000`).
 * **Backend Defensive Fallback (`/api/bookings/extend`)**: If `cardNumber` is omitted in the API payload, the backend automatically falls back to charging the reservation's pre-authorized card on file, completely eliminating the `"⚠️ Invalid card number. Please provide a valid 16-digit card number"` error while preserving bank decline simulation when explicitly tested.
 
+#### 6. Real-World Operational Gaps Solved in Phase 6: Instant 1-Click Role-Safe Account Switching & Cache Invalidation
+
+* **The "Double Login" Root Cause**:
+  1. **Forbidden Destination Bounce**: When a user previously navigated to a restricted area (e.g. `/admin/rates`), `/login` preserved `from=/admin/rates`. If the user then signed in with Staff credentials (`staff@estate.com`), the old logic blindly pushed the staff user to `fromUrl` (`/admin/rates`). Since `STAFF` lacks GM permissions, middleware immediately bounced them back to `/unauthorized`! On their second attempt, clicking "Switch Account" from `/unauthorized` lacked the `from` parameter, causing it to default to `/staff/dashboard`—giving the appearance that authentication required two attempts.
+  2. **Next.js Client Router Cache**: Using `router.push()` in Next.js 14 client-side navigation can serve cached RSC redirect responses from prior unauthorized attempts.
+* **The Permanent Architectural Fix**:
+  1. **Role-Safe Destination Resolution (`src/app/login/page.tsx`)**: The login handler now verifies the target URL against the user's newly authenticated role. If a `STAFF` user has a `from` pointing to an `/admin` route, it intelligently routes them to `/staff/dashboard` rather than a forbidden page. If a `GUEST` user attempts to log in with an admin/staff destination, it safely routes them to `/`.
+  2. **Authoritative Browser Navigation (`window.location.href`)**: Replaced `router.push()` with `window.location.href = targetUrl` on authentication transitions. This forces an authoritative HTTP request that guarantees the new `estate_session` cookie is attached and purges any stale Next.js client-side router cache.
+  3. **Role-Aware Unauthorized Screen (`src/app/unauthorized/page.tsx`)**: Intelligently informs the user why access was restricted (e.g. *"This management console requires General Manager (GM) credentials."* vs *"This operational section requires Hotel Staff or General Manager credentials."*) with a direct link to sign in with the proper role.
+
 
 
 
