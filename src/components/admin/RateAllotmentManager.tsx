@@ -1456,8 +1456,8 @@ export function RateAllotmentManager() {
                 <input
                   type="number"
                   required
-                  min="1"
-                  step="50"
+                  min="100"
+                  step="1"
                   placeholder="e.g. 9500"
                   value={bulkPrice}
                   onChange={(e) => setBulkPrice(e.target.value)}
