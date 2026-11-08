@@ -127,12 +127,6 @@ export default async function HomePage() {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-[#ebded2] bg-white py-6 mt-12 text-center text-xs text-stone-500">
-        <p>The Estate Resort • Chikkamagaluru, Karnataka • Software Engineering Intern Assessment</p>
-        <p className="text-[11px] text-stone-400 mt-1">Direct Booking Sanctuary • Statutory Indian Hotel GST Tier Engine</p>
-      </footer>
     </div>
   );
 }

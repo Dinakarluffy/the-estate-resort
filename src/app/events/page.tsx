@@ -39,11 +39,6 @@ export default async function EventsPage() {
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8">
         <EventEnquiryWizard />
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-[#ebded2] bg-white py-6 text-center text-xs text-stone-500">
-        The Estate Resort • Mullayanagiri, Chikkamagaluru, Karnataka • AI Enquiry Router & Hospitality Platform
-      </footer>
     </div>
   );
 }

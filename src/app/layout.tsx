@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "The Estate at Chikkamagaluru | Luxury Coffee Plantation Resort",
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen flex flex-col font-sans antialiased bg-[#fbf8f5] text-[#2e1c18]">
         {children}
+        <Footer />
       </body>
     </html>
   );

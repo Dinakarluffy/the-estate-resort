@@ -6,10 +6,23 @@
   --font-serif: 'Playfair Display', Georgia, serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   color: #2e1c18;
   background: #fbf8f5;
   font-feature-settings: "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Luxury Plantation Bespoke Selection Color */
+::selection {
+  background: #384432;
+  color: #fcf9f5;
 }
 
 /* Scrollbar for luxury calm aesthetic */
@@ -23,6 +36,12 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #b58269;
   border-radius: 3px;
+}
+
+/* Refined Accessible Focus Visible Rings */
+:focus-visible {
+  outline: 2px solid #384432;
+  outline-offset: 2px;
 }
 
 /* Disable browser native password reveal icon (Edge / Chrome) to avoid double eye icons */

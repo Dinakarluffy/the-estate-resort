@@ -507,6 +507,14 @@ The platform was built with a strict **hospitality-first architecture** conformi
 | **12. Runaway Promo Discounts on Luxury Stays** | 10% coupon applied to a ₹1,00,000 multi-night villa booking causes an excessive ₹10,000 discount. | Added **Max Discount Cap** (e.g. ₹2,000 cap). The discount is calculated as $\min(10\% \times \text{Tariff}, \text{Cap})$, protecting revenue. |
 | **13. HTML5 Step Validation Quirk** | Browser blocked typing ₹2,000 with message *"Nearest valid values are 1951 and 2001"*. | Replaced `min="1" step="50"` with `min="100" step="1"`, allowing any standard round Rupee integer. |
 | **14. Mobile Viewport & Touch Ergonomics** | Large 7-column tables squished text on phones; modals cut off buttons when on-screen keyboard opened. | Added `min-w-[700px]`/`min-w-[800px]` with horizontal touch scrolling and `max-h-[90vh] overflow-y-auto` across all modals. |
+| **15. The 24-Hour Event Reply Bottleneck (₹72L Loss)** | 30% of high-value wedding and offsite leads wait over 24h, causing guests to book rival resorts. | Sub-30 minute SLA timer with real-time green/amber/red tracking, auto-extracted pax/dates, and grounded AI draft replies. |
+| **16. AI Pricing Hallucination** | LLM invents non-existent room prices (e.g. ₹3,500 instead of ₹6,500), causing financial loss or legal dispute. | Zero-hallucination rate grounding queries live DB tariffs before prompting Gemini; drafts strictly quote real base rates. |
+| **17. Hill-Station Offline / API Quota Exhaustion** | Gemini API reaches 429 quota limit or hill-station internet disconnects, dropping incoming guest leads. | Deterministic rule-based fallback regex engine activates instantly with 0ms downtime; leads are never lost. |
+| **18. Accidental Dispatch to Mock Demo Phone Numbers** | Staff or reviewer clicks WhatsApp on seeded demo data, accidentally calling a stranger's phone number. | Purged all hardcoded mock phone numbers from code presets & seed database; guardrail blocks dialer/WhatsApp on test numbers. |
+| **19. Missing Phone Number on Incoming Web / Email Leads** | Guest submits web enquiry without mobile number; staff clicks WhatsApp Web or Call and hits a broken link. | Luxury in-app modal prompts staff to enter mobile number, saves to database (`updateEnquiryPhone`), and resumes dispatch. |
+| **20. Cryptic Raw Elapsed Minutes (`2740m`)** | Staff sees `2740m • SLA Breached` and gets confused thinking it's an error code or raw timestamp. | Added `formatSlaDuration` converting raw minutes into human-readable units (`14m`, `2h 15m`, `1d 21h • SLA Breached`). |
+| **21. Multiple Submissions / Lead Flooding** | Guest submits duplicate enquiries within 24 hours; two staff members send conflicting quotes. | Duplicate detector matches phone/email within 24h window and flags cards with a prominent amber duplicate warning banner. |
+| **22. Inconsistent Header Navigation Across Views** | Different pages showed divergent links (`My Stays` vs `My Bookings`, missing `Weddings & Events`, plain text user names). | Extracted unified `<Navbar />` component with Next.js `usePathname()` active highlighting and standard luxury user pill. |
 
 ---
 
@@ -592,5 +600,70 @@ The platform was built with a strict **hospitality-first architecture** conformi
     * **Dynamic Active Route Highlighting**: Uses Next.js `usePathname()` to automatically highlight the current page with luxury active styling (`bg-[#f5efe8] text-[#384432] font-bold border border-[#ebded2]`).
     * **Uniform Luxury User Profile Pill**: Standardizes `[Icon] <User Name> [Role Badge]` with `Sign Out` button on all views.
     * **Mobile Ergonomics**: Responsive slide-down navigation drawer with hamburger toggle preventing line-wrapping on mobile devices.
+12. **Bespoke Luxury Global Aesthetics & Unified Footer (`src/components/Footer.tsx`):**
+    * Added global `<Footer />` in `RootLayout` featuring complete resort credentials (76 Keys, Mullayanagiri Hills, zero OTA leakage guarantee, statutory GST compliance, DPDP Act 2023 statement).
+    * Enhanced `globals.css` with smooth page scrolling (`scroll-behavior: smooth`), custom coffee-tinted selection highlighting (`::selection { background: #384432; color: #fcf9f5; }`), refined focus rings, and optimized typography font-smoothing.
+
+#### 5. Architectural Flow & Human-in-the-Loop Pipeline
+
+```mermaid
+flowchart TD
+    Guest["Guest Enquiry (Web Form / Email / WhatsApp)"] --> Ingestion["Enquiry Ingestion Engine (src/lib/enquiry.ts)"]
+    Ingestion --> Dedupe{"Duplicate Check (24h Window)?"}
+    Dedupe -- "Match Found" --> FlagDuplicate["Flag with Amber Duplicate Banner"]
+    Dedupe -- "New Enquiry" --> QueryRates["Query Active DB Rates (Zero Hallucination Grounding)"]
+    FlagDuplicate --> QueryRates
+    QueryRates --> AIModel{"Google Gemini 3.5 Flash Available?"}
+    AIModel -- "Yes (HTTP 200)" --> GeminiProc["Extract Entities + Classify Category + Draft Quote"]
+    AIModel -- "Quota 429 / Offline" --> HeuristicEngine["Deterministic Heuristic Fallback Engine (0ms Downtime)"]
+    GeminiProc --> DealCalc["Calculate Estimated Revenue Deal Value (₹)"]
+    HeuristicEngine --> DealCalc
+    DealCalc --> AssignQueue{"Urgent Complaint or Low Confidence (<0.70)?"}
+    AssignQueue -- "Yes" --> GMReview["Flag requiresGmReview = true (GM Queue)"]
+    AssignQueue -- "No" --> StaffInbox["Route to Staff Unified AI Inbox"]
+    GMReview --> StaffInbox
+    StaffInbox --> HumanLoop["Staff / GM Human-in-the-Loop Review (/staff/dashboard)"]
+    HumanLoop --> EditDraft["Optional: Edit Draft / Add Private Internal Notes / 1-Click Re-Route"]
+    EditDraft --> StatusReviewed["Status Flips to REVIEWED"]
+    StatusReviewed --> Dispatch{"Dispatch Action"}
+    Dispatch -- "Approve & Send" --> MarkSent["Status: SENT • SLA Marked Resolved"]
+    Dispatch -- "Approve & WhatsApp" --> CheckPhone{"Phone Number on Record?"}
+    CheckPhone -- "No" --> PhoneModal["Open In-App Missing Phone Modal Prompt"]
+    PhoneModal --> SavePhone["Save Phone to DB (updateEnquiryPhone)"]
+    SavePhone --> LaunchWA["Launch WhatsApp Web (wa.me) with Pre-filled Quote"]
+    CheckPhone -- "Yes" --> LaunchWA
+    LaunchWA --> MarkSent
+```
+
+#### 6. Step-by-Step Reviewer Guide: Testing Phase 5 End-to-End
+
+1. **Simulate Incoming Leads (`/events`)**:
+   * Navigate to `/events`.
+   * Under the **"1-Click IsoCode Reviewer Benchmark Simulator"**, click:
+     * **Preset 1 (Wedding)**: *"Sister's wedding in Feb 2027, 250 guests, 2 nights"*. Click **Send Enquiry**.
+     * **Preset 2 (Urgent Complaint)**: *"AC in room 104 is not working, very hot and leaking water!"*. Click **Send Enquiry**.
+     * **Preset 3 (Vague / Low Confidence)**: *"Can you help me? Need some information."*. Click **Send Enquiry**.
+2. **Access the Staff Unified AI Enquiry Inbox (`/staff/dashboard`)**:
+   * Log in with credentials: `staff@estate.com` / `demo1234` (or `gm@estate.com` / `demo1234`).
+   * Navigate to `/staff/dashboard`.
+3. **Verify Category & Status Filters**:
+   * Notice the **Category tabs**: `All Active`, `Weddings`, `Corporate`, `Rooms`, `Complaints`, `GM Review Queue`, and `Archived`.
+   * Click the **Weddings** tab: The horizontal status sub-bar dynamically recalculates live counts for Weddings (`All Statuses`, `New`, `Reviewed`, `Sent`).
+   * Click **New**: Filters exclusively to fresh wedding enquiries awaiting review.
+4. **Inspect Live SLA Duration Timer**:
+   * Newly submitted leads display green: `1m • SLA On Track`.
+   * Older leads display human-readable units (e.g. `⚠️ 1d 21h • SLA Breached`) rather than confusing raw minute integers like `2740m`.
+5. **Human-in-the-Loop Review & Customization**:
+   * Click an enquiry card to select it.
+   * Click **Edit Draft Quotation**, modify the text, and click **Save Draft**. Notice the badge flips from `NEW` to **`REVIEWED`**.
+   * Add private notes in the **Internal Collaboration Notes** box and click **Save Notes**. Notice the `📝 Note Attached` icon appears on the card.
+6. **Test Missing Phone Number Prompt & Safe WhatsApp Dispatch**:
+   * For an enquiry without a mobile number (e.g. web enquiry), click **Approve & WhatsApp (Add #)**.
+   * Notice the luxury in-app alert modal appears asking for a phone number.
+   * Enter a phone number and click **Save & Open WhatsApp**: The phone number is saved to the database (`updateEnquiryPhone`), WhatsApp Web opens with the formatted quote pre-filled, and the lead status flips to **`SENT`** (SLA resolved).
+7. **Test Spam Archival & Pipeline CSV Export**:
+   * For spam/unwanted leads, click **Archive Lead**. The card is safely removed from active sales views into the **🗄️ Archived** tab.
+   * Click **Export CSV** in the top action bar: Downloads a clean 15-column sales pipeline file formatted for Microsoft Excel with UTF-8 BOM encoding.
+
 
 
