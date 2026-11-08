@@ -586,5 +586,11 @@ The platform was built with a strict **hospitality-first architecture** conformi
     * **`REVIEWED`**: Staff has inspected/edited the quotation or saved internal notes; ready for dispatch.
     * **`SENT`**: Reply dispatched to guest via Email/WhatsApp; SLA marked as `Resolved`.
     * **Universal Multi-Criteria Search**: Synchronized search input filters instantaneously across guest name, phone, email, enquiry number, raw message, category, channel, internal notes, and lifecycle status keywords (`"new"`, `"reviewed"`, `"sent"`).
+11. **Unified Global Navigation Bar Architecture (`src/components/Navbar.tsx`):**
+    * Eliminated all page-specific navigation divergences. Extracted a single, authoritative `<Navbar />` component shared identically across all views (`/`, `/rooms`, `/events`, `/my-bookings`, `/book`, `/confirmation/[id]`).
+    * **Strict Nav Link Consistency**: Displays `Home`, `Rooms & Villas`, `Weddings & Events`, and `My Bookings` across every view.
+    * **Dynamic Active Route Highlighting**: Uses Next.js `usePathname()` to automatically highlight the current page with luxury active styling (`bg-[#f5efe8] text-[#384432] font-bold border border-[#ebded2]`).
+    * **Uniform Luxury User Profile Pill**: Standardizes `[Icon] <User Name> [Role Badge]` with `Sign Out` button on all views.
+    * **Mobile Ergonomics**: Responsive slide-down navigation drawer with hamburger toggle preventing line-wrapping on mobile devices.
 
 

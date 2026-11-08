@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@/components/SignOutButton";
 import { GuestBookingsList, BookingItem } from "@/components/bookings/GuestBookingsList";
+import { Navbar } from "@/components/Navbar";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -78,55 +79,7 @@ export default async function MyBookingsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#faf7f2]">
       {/* Top Header */}
-      <header className="border-b border-[#ebded2] bg-white/90 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#384432] text-white flex items-center justify-center shadow-sm">
-              <Coffee className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="font-serif font-bold text-lg text-[#2f392b] block leading-tight">
-                The Estate
-              </span>
-              <span className="text-[10px] uppercase tracking-widest text-[#7e5241] block">
-                Chikkamagaluru
-              </span>
-            </div>
-          </Link>
-
-          <nav className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-xs font-semibold text-stone-600 hover:text-stone-900 transition px-2 py-1"
-            >
-              Home
-            </Link>
-            <Link
-              href="/rooms"
-              className="text-xs font-semibold text-stone-600 hover:text-stone-900 transition px-2 py-1"
-            >
-              Rooms & Villas
-            </Link>
-            <Link
-              href="/my-bookings"
-              className="text-xs font-bold text-[#384432] px-2 py-1 border-b-2 border-[#384432]"
-            >
-              My Bookings ({bookings.length})
-            </Link>
-
-            <div className="flex items-center gap-2.5 ml-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f5efe8] rounded-full border border-[#ebded2] text-xs">
-                <User className="w-3.5 h-3.5 text-stone-600" />
-                <span className="font-medium text-stone-800">{user.name}</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#384432] text-white">
-                  {user.role}
-                </span>
-              </div>
-              <SignOutButton />
-            </div>
-          </nav>
-        </div>
-      </header>
+      <Navbar user={user} bookingCount={bookings.length} />
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8 flex-1 w-full space-y-6">

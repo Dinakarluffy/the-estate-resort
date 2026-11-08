@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PrintButton } from "@/components/booking/PrintButton";
+import { Navbar } from "@/components/Navbar";
 
 interface ConfirmationPageProps {
   params: { id: string };
@@ -55,40 +56,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   return (
     <div className="min-h-screen flex flex-col bg-[#faf7f2]">
       {/* Top Header */}
-      <header className="border-b border-[#ebded2] bg-white/90 backdrop-blur sticky top-0 z-40 print:hidden">
-        <div className="max-w-4xl mx-auto px-4 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#384432] text-white flex items-center justify-center shadow-sm">
-              <Coffee className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="font-serif font-bold text-lg text-[#2f392b] block leading-tight">
-                The Estate
-              </span>
-              <span className="text-[10px] uppercase tracking-widest text-[#7e5241] block">
-                Chikkamagaluru
-              </span>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/rooms"
-              className="text-xs font-semibold text-stone-600 hover:text-stone-900 transition"
-            >
-              Browse Rooms
-            </Link>
-            {user?.role === "STAFF" || user?.role === "GM" ? (
-              <Link
-                href="/staff/dashboard"
-                className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200"
-              >
-                Staff Portal →
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
+      <Navbar user={user} />
 
       {/* Main Voucher Container */}
       <main className="max-w-3xl mx-auto px-4 py-8 flex-1 w-full space-y-6">

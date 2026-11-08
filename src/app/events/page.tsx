@@ -2,8 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { verifySessionToken } from "@/lib/auth";
 import { Coffee, ArrowRight, Sparkles, LogIn, Calendar, Users, HeartHandshake } from "lucide-react";
-import { SignOutButton } from "@/components/SignOutButton";
 import { EventEnquiryWizard } from "@/components/events/EventEnquiryWizard";
+import { Navbar } from "@/components/Navbar";
 
 export const metadata = {
   title: "Weddings & Corporate Offsites | The Estate Chikkamagaluru",
@@ -18,78 +18,7 @@ export default async function EventsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#faf7f2]">
       {/* Top Header */}
-      <header className="border-b border-[#ebded2] bg-white/90 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#384432] text-amber-100 flex items-center justify-center shadow-xs">
-              <Coffee className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="font-serif font-bold text-base tracking-tight text-stone-900 block leading-tight">
-                The Estate
-              </span>
-              <span className="text-[10px] tracking-widest uppercase text-stone-500 font-sans block">
-                Chikkamagaluru
-              </span>
-            </div>
-          </Link>
-
-          <nav className="flex items-center gap-4 text-xs font-medium text-stone-700">
-            <Link href="/" className="hover:text-[#384432] transition">
-              Home
-            </Link>
-            <Link href="/rooms" className="hover:text-[#384432] transition">
-              Rooms & Villas
-            </Link>
-            <Link href="/events" className="text-[#384432] font-bold">
-              Weddings & Events
-            </Link>
-            {user && (
-              <Link href="/my-bookings" className="hover:text-[#384432] transition">
-                My Stays
-              </Link>
-            )}
-
-            {user ? (
-              <div className="flex items-center gap-2.5 ml-2 pl-3 border-l border-stone-200">
-                <span className="text-xs text-stone-600 font-medium">
-                  {user.name}
-                </span>
-
-                {user.role === "GM" && (
-                  <Link
-                    href="/admin/dashboard"
-                    className="px-2.5 py-1 text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition"
-                  >
-                    GM Panel
-                  </Link>
-                )}
-
-                {(user.role === "STAFF" || user.role === "GM") && (
-                  <Link
-                    href="/staff/dashboard"
-                    className="px-2.5 py-1 text-[11px] font-semibold bg-[#384432] hover:bg-[#2f392b] text-white rounded-lg transition"
-                  >
-                    Staff Inbox
-                  </Link>
-                )}
-
-                <SignOutButton />
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 ml-2">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#384432] hover:bg-[#2f392b] text-white text-xs font-semibold shadow-sm transition"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Sign In</span>
-                </Link>
-              </div>
-            )}
-          </nav>
-        </div>
-      </header>
+      <Navbar user={user} />
 
       {/* Hero Section */}
       <section className="bg-white border-b border-[#ebded2] py-12 px-4">
