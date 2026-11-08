@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth";
 import { createBooking, getUserBookings, getAllBookings } from "@/lib/booking";
+import { applyRateLimit, RATE_LIMIT_TIERS } from "@/lib/rateLimit";
+import { sanitizeString, sanitizeEmail, sanitizePhone, sanitizePromoCode } from "@/lib/sanitize";
 
 export async function POST(request: NextRequest) {
+  // Phase 7: Rate limit direct booking creation (prevents bot hoarding)
+  const rateLimitError = applyRateLimit(request, RATE_LIMIT_TIERS.BOOKING);
+  if (rateLimitError) return rateLimitError;
+
   try {
     const sessionToken = request.cookies.get("estate_session")?.value;
     const user = sessionToken ? await verifySessionToken(sessionToken) : null;
@@ -38,16 +44,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const cleanedGuestName = guestName ? sanitizeString(guestName) : user.name;
+    const cleanedGuestEmail = guestEmail ? sanitizeEmail(guestEmail) : user.email;
+    const cleanedGuestPhone = guestPhone ? sanitizePhone(guestPhone) : "+91 98765 43210";
+    const cleanedPromoCode = promoCode ? sanitizePromoCode(promoCode) : undefined;
+    const cleanedPaymentRef = paymentReference ? sanitizeString(paymentReference) : `SIM-${Date.now()}`;
+
     const booking = await createBooking({
       userId: user.userId,
-      guestName: guestName || user.name,
-      guestEmail: guestEmail || user.email,
-      guestPhone: guestPhone || "+91 98765 43210",
+      guestName: cleanedGuestName,
+      guestEmail: cleanedGuestEmail,
+      guestPhone: cleanedGuestPhone,
       roomTypeId,
       checkIn,
       checkOut,
-      promoCode,
-      paymentReference,
+      promoCode: cleanedPromoCode,
+      paymentReference: cleanedPaymentRef,
       keysCount: keysCount || 1,
     });
 

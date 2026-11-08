@@ -2,25 +2,37 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifySessionToken } from "@/lib/auth";
 import { ingestEnquiry, getFilteredEnquiries } from "@/lib/enquiry";
+import { applyRateLimit, RATE_LIMIT_TIERS } from "@/lib/rateLimit";
+import { sanitizeString, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
 
 export async function POST(req: NextRequest) {
+  // Phase 7: Sliding-window rate limit on enquiry ingestion (prevents spam lead flooding)
+  const rateLimitError = applyRateLimit(req, RATE_LIMIT_TIERS.ENQUIRY);
+  if (rateLimitError) return rateLimitError;
+
   try {
     const body = await req.json();
     const { source, rawMessage, guestName, guestEmail, guestPhone } = body;
 
-    if (!rawMessage || rawMessage.trim().length === 0) {
+    if (!rawMessage || typeof rawMessage !== "string" || rawMessage.trim().length === 0) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
     const validSources = ["WEB", "EMAIL", "WHATSAPP"];
     const chosenSource = validSources.includes(source) ? source : "WEB";
 
+    // DPDP Act 2023 & XSS Sanitization
+    const cleanedMessage = sanitizeString(rawMessage);
+    const cleanedGuestName = guestName ? sanitizeString(guestName) : undefined;
+    const cleanedGuestEmail = guestEmail ? sanitizeEmail(guestEmail) : undefined;
+    const cleanedGuestPhone = guestPhone ? sanitizePhone(guestPhone) : undefined;
+
     const created = await ingestEnquiry({
       source: chosenSource,
-      rawMessage,
-      guestName,
-      guestEmail,
-      guestPhone,
+      rawMessage: cleanedMessage,
+      guestName: cleanedGuestName,
+      guestEmail: cleanedGuestEmail,
+      guestPhone: cleanedGuestPhone,
     });
 
     return NextResponse.json({ success: true, enquiry: created });

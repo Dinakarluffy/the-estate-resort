@@ -1,12 +1,27 @@
 import { NextResponse } from "next/server";
 import { registerUser } from "@/lib/auth";
+import { applyRateLimit, RATE_LIMIT_TIERS } from "@/lib/rateLimit";
+import { sanitizeString, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
 
 export async function POST(request: Request) {
+  // Phase 7: Sliding-window rate limit guardrail
+  const rateLimitError = applyRateLimit(request, RATE_LIMIT_TIERS.AUTH);
+  if (rateLimitError) return rateLimitError;
+
   try {
     const body = await request.json();
     const { name, email, password, phone } = body;
 
-    const result = await registerUser({ name, email, password, phone });
+    const cleanedName = sanitizeString(name);
+    const cleanedEmail = sanitizeEmail(email);
+    const cleanedPhone = phone ? sanitizePhone(phone) : undefined;
+
+    const result = await registerUser({
+      name: cleanedName,
+      email: cleanedEmail,
+      password,
+      phone: cleanedPhone,
+    });
 
     if (!result.success || !result.token) {
       return NextResponse.json(

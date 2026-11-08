@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { simulatePayment } from "@/lib/payment";
+import { applyRateLimit, RATE_LIMIT_TIERS } from "@/lib/rateLimit";
 
 export async function POST(request: NextRequest) {
+  // Phase 7: Rate limit payment simulations
+  const rateLimitError = applyRateLimit(request, RATE_LIMIT_TIERS.PAYMENT);
+  if (rateLimitError) return rateLimitError;
+
   try {
     const body = await request.json();
     const { amount, paymentMethod, cardNumber, cardExpiry, cardCvv, upiId } = body;
