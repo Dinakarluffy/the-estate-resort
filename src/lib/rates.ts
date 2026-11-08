@@ -214,7 +214,10 @@ export async function bulkUpdateDailyRates(
 
 /**
  * Updates website allotment for a room type on a specific date.
- * Enforces critical hospitality rule: Cannot reduce allotment below already booked keys!
+ * Enforces critical hospitality rules:
+ * 1. Cannot exceed total physical resort keys (e.g. 32 for Heritage/Suite, 12 for Villa)
+ * 2. Cannot reduce allotment below already booked keys
+ * 3. Cannot be negative
  */
 export async function updateWebsiteAllotment(
   roomTypeId: string,
@@ -223,6 +226,21 @@ export async function updateWebsiteAllotment(
 ) {
   if (websiteAllotment < 0) {
     throw new Error("Website allotment cannot be negative");
+  }
+
+  const roomType = await prisma.roomType.findUnique({
+    where: { id: roomTypeId },
+    select: { name: true, totalKeys: true },
+  });
+
+  if (!roomType) {
+    throw new Error(`Room type ${roomTypeId} not found`);
+  }
+
+  if (websiteAllotment > roomType.totalKeys) {
+    throw new Error(
+      `Cannot set website allotment to ${websiteAllotment} keys: Exceeds total resort capacity (${roomType.totalKeys} physical keys) for ${roomType.name}.`
+    );
   }
 
   const existing = await prisma.allotment.findUnique({

@@ -149,6 +149,16 @@ describe("rates.ts - Dynamic Rates, Allotment Matrix & GM Inventory Controls", (
         updateWebsiteAllotment(testRoomTypeId, testDate1, -1)
       ).rejects.toThrow("Website allotment cannot be negative");
     });
+
+    it("throws error if trying to set allotment greater than total physical resort keys", async () => {
+      const roomType = await prisma.roomType.findUniqueOrThrow({
+        where: { id: testRoomTypeId },
+      });
+
+      await expect(
+        updateWebsiteAllotment(testRoomTypeId, testDate1, roomType.totalKeys + 5)
+      ).rejects.toThrow(/Exceeds total resort capacity/);
+    });
   });
 
   describe("setBlackoutDate, removeBlackoutDate & getAllBlackoutDates", () => {

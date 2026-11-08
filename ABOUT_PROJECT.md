@@ -769,6 +769,15 @@ A dedicated Vitest integration suite with 12 comprehensive test cases verifying 
   2. **Authoritative Browser Navigation (`window.location.href`)**: Replaced `router.push()` with `window.location.href = targetUrl` on authentication transitions. This forces an authoritative HTTP request that guarantees the new `estate_session` cookie is attached and purges any stale Next.js client-side router cache.
   3. **Role-Aware Unauthorized Screen (`src/app/unauthorized/page.tsx`)**: Intelligently informs the user why access was restricted (e.g. *"This management console requires General Manager (GM) credentials."* vs *"This operational section requires Hotel Staff or General Manager credentials."*) with a direct link to sign in with the proper role.
 
+#### 7. Real-World Operational Gaps Solved in Phase 6: Physical Resort Capacity Ceiling Guardrail
+
+* **The Phantom Inventory Problem**: The resort physically has **76 total keys** (32 Planter's Heritage Rooms, 32 Coffee Estate Luxury Suites, 12 Misty Valley Pool Villas). Previously, the inline allotment editor lacked an upper bound check, allowing a GM to inadvertently input e.g. `35 Keys` for Planter's Heritage Room—which would sell phantom rooms that do not exist physically and cause negative remaining inventory calculations ($32 - 35 = -3$).
+* **Strict Dual-Layer Capacity Guardrails**:
+  1. **Backend Database Verification (`src/lib/rates.ts`)**: In `updateWebsiteAllotment`, the system queries `roomType.totalKeys`. If `websiteAllotment > roomType.totalKeys`, it throws an explicit business error:
+     `Cannot set website allotment to X keys: Exceeds total resort capacity (Y physical keys) for <RoomName>.`
+  2. **Frontend Inline Editor Protection (`RateAllotmentManager.tsx`)**: `InlineAllotmentInput` now enforces `maxAllowed={selectedMatrix.roomType.totalKeys}` and displays an instant in-place tooltip banner (`⚠️ Max 32 keys (Total resort capacity for Planter's Heritage Room)`) blocking invalid submissions.
+* **Automated Verification**: Added dedicated Vitest test case verifying physical key ceiling rejection. All 144 unit & integration tests pass (100% green).
+
 
 
 

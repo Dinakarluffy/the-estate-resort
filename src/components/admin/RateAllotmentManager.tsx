@@ -739,6 +739,8 @@ export function RateAllotmentManager() {
                             <InlineAllotmentInput
                               initialValue={day.websiteAllotment}
                               minAllowed={day.bookedCount}
+                              maxAllowed={selectedMatrix.roomType.totalKeys}
+                              roomName={selectedMatrix.roomType.name}
                               onSave={(newVal) =>
                                 handleSaveAllotment(selectedMatrix.roomType.id, day.date, newVal)
                               }
@@ -1657,23 +1659,32 @@ function InlinePriceInput({
 function InlineAllotmentInput({
   initialValue,
   minAllowed,
+  maxAllowed,
+  roomName,
   onSave,
 }: {
   initialValue: number;
   minAllowed: number;
+  maxAllowed?: number;
+  roomName?: string;
   onSave: (newVal: number) => void;
 }) {
   const [val, setVal] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setVal(initialValue);
+    setErrorMsg(null);
   }, [initialValue]);
 
   if (!isEditing) {
     return (
       <button
-        onClick={() => setIsEditing(true)}
+        onClick={() => {
+          setIsEditing(true);
+          setErrorMsg(null);
+        }}
         className="font-mono font-bold text-stone-900 hover:text-emerald-700 hover:underline flex items-center gap-1"
         title="Click to edit website allotment"
       >
@@ -1683,36 +1694,70 @@ function InlineAllotmentInput({
     );
   }
 
+  const handleCommit = () => {
+    if (minAllowed !== undefined && val < minAllowed) {
+      setErrorMsg(`Min ${minAllowed} keys (${minAllowed} booked)`);
+      return;
+    }
+    if (maxAllowed !== undefined && val > maxAllowed) {
+      setErrorMsg(`Max ${maxAllowed} keys (Total resort capacity for ${roomName || "room"})`);
+      return;
+    }
+    setErrorMsg(null);
+    setIsEditing(false);
+    if (val !== initialValue) onSave(val);
+  };
+
   return (
-    <div className="flex items-center gap-1">
-      <input
-        type="number"
-        min={minAllowed}
-        value={val}
-        onChange={(e) => setVal(Number(e.target.value))}
-        className="w-16 p-1 border border-stone-300 rounded font-mono text-xs font-bold"
-        autoFocus
-      />
-      <button
-        onClick={() => {
-          setIsEditing(false);
-          if (val !== initialValue) onSave(val);
-        }}
-        className="p-1 bg-emerald-700 text-white rounded text-[10px]"
-        title="Save"
-      >
-        ✓
-      </button>
-      <button
-        onClick={() => {
-          setVal(initialValue);
-          setIsEditing(false);
-        }}
-        className="p-1 text-stone-400 hover:text-stone-600 rounded text-[10px]"
-        title="Cancel"
-      >
-        ✕
-      </button>
+    <div className="relative inline-block">
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min={minAllowed}
+          max={maxAllowed}
+          value={val}
+          onChange={(e) => {
+            setVal(Number(e.target.value));
+            setErrorMsg(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleCommit();
+            if (e.key === "Escape") {
+              setVal(initialValue);
+              setIsEditing(false);
+              setErrorMsg(null);
+            }
+          }}
+          className={`w-16 p-1 border rounded font-mono text-xs font-bold ${
+            errorMsg ? "border-red-500 bg-red-50 text-red-900 ring-1 ring-red-400" : "border-stone-300"
+          }`}
+          autoFocus
+        />
+        <button
+          onClick={handleCommit}
+          className="p-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-[10px]"
+          title="Save allotment"
+        >
+          ✓
+        </button>
+        <button
+          onClick={() => {
+            setVal(initialValue);
+            setIsEditing(false);
+            setErrorMsg(null);
+          }}
+          className="p-1 text-stone-400 hover:text-stone-600 rounded text-[10px]"
+          title="Cancel"
+        >
+          ✕
+        </button>
+      </div>
+
+      {errorMsg && (
+        <div className="absolute left-0 top-full mt-1 z-40 bg-red-900 text-white text-[10px] font-sans font-semibold py-1 px-2 rounded-md shadow-lg whitespace-nowrap animate-in fade-in">
+          ⚠️ {errorMsg}
+        </div>
+      )}
     </div>
   );
 }
