@@ -5,6 +5,7 @@ import {
   createPromoCode,
   togglePromoCodeStatus,
   getAllPromoCodes,
+  deletePromoCode,
 } from "@/lib/rates";
 
 async function verifyGmAuth() {
@@ -68,6 +69,26 @@ export async function PATCH(req: NextRequest) {
 
     const updated = await togglePromoCodeStatus(id, isActive);
     return NextResponse.json({ success: true, promo: updated });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 400 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const user = await verifyGmAuth();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized. GM role required." }, { status: 403 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "Missing promo id parameter" }, { status: 400 });
+    }
+
+    await deletePromoCode(id);
+    return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }

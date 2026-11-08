@@ -149,6 +149,21 @@ export function RateAllotmentManager() {
   const [promoValidTo, setPromoValidTo] = useState("");
   const [promoMaxUses, setPromoMaxUses] = useState("100");
 
+  // Custom Styled Delete Promo Modal State
+  const [deletePromoModal, setDeletePromoModal] = useState<{
+    isOpen: boolean;
+    id: string;
+    code: string;
+    currentUses: number;
+    submitting: boolean;
+  }>({
+    isOpen: false,
+    id: "",
+    code: "",
+    currentUses: 0,
+    submitting: false,
+  });
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -487,6 +502,26 @@ export function RateAllotmentManager() {
       loadData();
     } catch (err: any) {
       showToast("error", err.message);
+    }
+  };
+
+  // Permanently Delete Promo Voucher
+  const handleConfirmDeletePromo = async () => {
+    if (!deletePromoModal.id) return;
+    setDeletePromoModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      const res = await fetch(`/api/admin/promos?id=${deletePromoModal.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete promo voucher");
+
+      showToast("success", `Permanently removed voucher "${deletePromoModal.code}"`);
+      setDeletePromoModal({ isOpen: false, id: "", code: "", currentUses: 0, submitting: false });
+      loadData();
+    } catch (err: any) {
+      showToast("error", err.message);
+      setDeletePromoModal((prev) => ({ ...prev, submitting: false }));
     }
   };
 
@@ -965,6 +1000,22 @@ export function RateAllotmentManager() {
       {/* ---------------------------------------------------------------------- */}
       {activeTab === "promos" && (
         <div className="space-y-4">
+          {/* Informational Guidance Box on Min Tariff & Max Cap */}
+          <div className="bg-[#faf7f2] border border-[#ebded2] rounded-2xl p-4 text-xs text-stone-700 flex items-start gap-3 shadow-2xs">
+            <Info className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
+            <div className="space-y-1 leading-relaxed">
+              <span className="font-bold text-stone-900">Understanding Discount Controls:</span>
+              <ul className="list-disc list-inside space-y-0.5 text-stone-600">
+                <li>
+                  <strong className="text-stone-800">Min Tariff:</strong> Minimum booking amount required before discount is applied (e.g., ₹5,000 ensures promo is not burned on micro-stays).
+                </li>
+                <li>
+                  <strong className="text-stone-800">Max Cap:</strong> Upper limit ceiling on the total discount in INR (e.g., 10% capped at ₹2,000 protects resort revenue on high-value multi-night villa bookings).
+                </li>
+              </ul>
+            </div>
+          </div>
+
           <div className="bg-white border border-[#ebded2] rounded-2xl shadow-sm overflow-hidden">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-[#faf7f2] border-b border-[#ebded2] text-stone-700 font-bold uppercase tracking-wider text-[11px]">
@@ -1011,16 +1062,33 @@ export function RateAllotmentManager() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleTogglePromo(p.id, p.isActive)}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${
-                          p.isActive
-                            ? "border border-red-200 text-red-600 hover:bg-red-50"
-                            : "bg-emerald-700 hover:bg-emerald-800 text-white"
-                        }`}
-                      >
-                        {p.isActive ? "Deactivate" : "Activate"}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleTogglePromo(p.id, p.isActive)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${
+                            p.isActive
+                              ? "border border-stone-200 text-stone-600 hover:bg-stone-100"
+                              : "bg-emerald-700 hover:bg-emerald-800 text-white"
+                          }`}
+                        >
+                          {p.isActive ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDeletePromoModal({
+                              isOpen: true,
+                              id: p.id,
+                              code: p.code,
+                              currentUses: p.currentUses,
+                              submitting: false,
+                            })
+                          }
+                          className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition border border-transparent hover:border-red-200"
+                          title="Delete Promo Voucher"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1234,6 +1302,87 @@ export function RateAllotmentManager() {
                 className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-sm transition text-xs disabled:opacity-50"
               >
                 {deleteModal.submitting ? "Removing..." : "Yes, Re-open Inventory"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------------- */}
+      {/* CUSTOM LUXURY MODAL 3: DELETE PROMO CODE                               */}
+      {/* ---------------------------------------------------------------------- */}
+      {deletePromoModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 border border-[#ebded2]">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-lg text-stone-900">
+                    Delete Promo Voucher
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    Permanently delete promotional discount code
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeletePromoModal((prev) => ({ ...prev, isOpen: false }))}
+                className="text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-stone-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 text-xs space-y-2">
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-semibold">Voucher Code:</span>
+                <strong className="text-stone-900 font-mono text-sm px-2 py-0.5 bg-emerald-50 text-emerald-900 rounded border border-emerald-200">
+                  {deletePromoModal.code}
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500 font-semibold">Total Redemptions:</span>
+                <span className="text-stone-900 font-mono font-bold">
+                  {deletePromoModal.currentUses} time(s)
+                </span>
+              </div>
+            </div>
+
+            {deletePromoModal.currentUses > 0 ? (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-950 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Financial Audit Notice</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-900">
+                  This voucher has been redeemed by guests in <strong>{deletePromoModal.currentUses} past booking(s)</strong>.
+                  In hotel revenue auditing, <em>deactivating</em> is recommended so historical invoices preserve voucher metadata.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-stone-600 leading-relaxed">
+                This voucher code has <strong>0 redemptions</strong> and has not been used by any guest. It can be safely and permanently removed from the system.
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-100">
+              <button
+                type="button"
+                onClick={() => setDeletePromoModal((prev) => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2.5 border border-stone-200 rounded-xl text-stone-700 font-semibold hover:bg-stone-50 transition text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeletePromo}
+                disabled={deletePromoModal.submitting}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-sm transition text-xs disabled:opacity-50"
+              >
+                {deletePromoModal.submitting ? "Deleting..." : "Yes, Permanently Delete"}
               </button>
             </div>
           </div>

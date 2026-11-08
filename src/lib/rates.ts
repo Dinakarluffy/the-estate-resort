@@ -461,3 +461,12 @@ export async function getAllPromoCodes() {
     orderBy: { validFrom: "desc" },
   });
 }
+
+/**
+ * Deletes a promo code permanently
+ */
+export async function deletePromoCode(id: string) {
+  return prisma.promoCode.delete({
+    where: { id },
+  });
+}

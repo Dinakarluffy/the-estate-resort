@@ -13,6 +13,7 @@ import {
   createPromoCode,
   togglePromoCodeStatus,
   getAllPromoCodes,
+  deletePromoCode,
 } from "./rates";
 
 const prisma = new PrismaClient();
@@ -283,6 +284,11 @@ describe("rates.ts - Dynamic Rates, Allotment Matrix & GM Inventory Controls", (
       // Toggle to inactive
       const updated = await togglePromoCodeStatus(promo.id, false);
       expect(updated.isActive).toBe(false);
+
+      // Permanently delete promo code
+      await deletePromoCode(promo.id);
+      const afterDelete = await getAllPromoCodes();
+      expect(afterDelete.some((p) => p.code === testPromoCode)).toBe(false);
     });
 
     it("validates discount percentage bounds", async () => {
