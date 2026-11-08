@@ -152,14 +152,30 @@ export function UnifiedEnquiryInbox() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to approve enquiry");
 
-      // Open WhatsApp Web with cleaned digits
-      if (selectedEnquiry.guestPhone) {
-        const cleanPhone = selectedEnquiry.guestPhone.replace(/\D/g, "");
+      // Safety guardrail: only open WhatsApp Web if it is a real number (not a mock placeholder)
+      const cleanPhone = selectedEnquiry.guestPhone ? selectedEnquiry.guestPhone.replace(/\D/g, "") : "";
+      const isMockNumber =
+        cleanPhone === "9811122334" ||
+        cleanPhone === "9876512345" ||
+        cleanPhone === "9876543210" ||
+        cleanPhone === "9444455555" ||
+        cleanPhone === "9999988888" ||
+        cleanPhone === "9123456789" ||
+        cleanPhone.startsWith("0000") ||
+        cleanPhone.startsWith("99999") ||
+        cleanPhone.length < 10;
+
+      if (cleanPhone && !isMockNumber) {
         const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(draftText)}`;
         window.open(waUrl, "_blank");
+        showToast("success", `Approved & WhatsApp Web opened for ${selectedEnquiry.enquiryNumber}`);
+      } else {
+        showToast(
+          "success",
+          `Approved & logged as SENT! (WhatsApp launch safely skipped for mock/placeholder number to prevent messaging strangers)`
+        );
       }
 
-      showToast("success", `Approved & WhatsApp Web opened for ${selectedEnquiry.enquiryNumber}`);
       setSelectedEnquiry(data.enquiry);
       fetchEnquiries();
     } catch (err: any) {
@@ -730,30 +746,63 @@ export function UnifiedEnquiryInbox() {
                   </p>
 
                   {/* Quick Contact Links: Call & WhatsApp */}
-                  {selectedEnquiry.guestPhone && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <a
-                        href={`tel:${selectedEnquiry.guestPhone}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-medium transition"
-                      >
-                        <Phone className="w-3 h-3 text-stone-600" />
-                        <span>Call Guest</span>
-                      </a>
+                  {selectedEnquiry.guestPhone && (() => {
+                    const cleanPhone = selectedEnquiry.guestPhone.replace(/\D/g, "");
+                    const isMockNumber =
+                      cleanPhone === "9811122334" ||
+                      cleanPhone === "9876512345" ||
+                      cleanPhone === "9876543210" ||
+                      cleanPhone === "9444455555" ||
+                      cleanPhone === "9999988888" ||
+                      cleanPhone === "9123456789" ||
+                      cleanPhone.startsWith("0000") ||
+                      cleanPhone.startsWith("99999") ||
+                      cleanPhone.length < 10;
 
-                      <a
-                        href={`https://wa.me/${selectedEnquiry.guestPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
-                          draftText || selectedEnquiry.draftReply || ""
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold transition border border-emerald-200"
-                        title="Open WhatsApp with approved reply pre-filled"
-                      >
-                        <MessageSquare className="w-3 h-3 text-emerald-600" />
-                        <span>Send via WhatsApp Web</span>
-                      </a>
-                    </div>
-                  )}
+                    return (
+                      <div className="flex items-center gap-2 mt-2">
+                        <a
+                          href={isMockNumber ? "#" : `tel:${selectedEnquiry.guestPhone}`}
+                          onClick={(e) => {
+                            if (isMockNumber) {
+                              e.preventDefault();
+                              showToast("error", "Dialer disabled for mock test phone number");
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-medium transition"
+                        >
+                          <Phone className="w-3 h-3 text-stone-600" />
+                          <span>Call Guest</span>
+                        </a>
+
+                        <a
+                          href={
+                            isMockNumber
+                              ? "#"
+                              : `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
+                                  draftText || selectedEnquiry.draftReply || ""
+                                )}`
+                          }
+                          onClick={(e) => {
+                            if (isMockNumber) {
+                              e.preventDefault();
+                              showToast(
+                                "error",
+                                "WhatsApp Web disabled for mock test phone number. Enter a real number to test."
+                              );
+                            }
+                          }}
+                          target={isMockNumber ? undefined : "_blank"}
+                          rel={isMockNumber ? undefined : "noopener noreferrer"}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold transition border border-emerald-200"
+                          title="Open WhatsApp with approved reply pre-filled"
+                        >
+                          <MessageSquare className="w-3 h-3 text-emerald-600" />
+                          <span>Send via WhatsApp Web</span>
+                        </a>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Right Top Controls: Re-Route & Archive Toggle */}

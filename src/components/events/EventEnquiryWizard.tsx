@@ -45,35 +45,35 @@ export function EventEnquiryWizard() {
         setSource("WEB");
         setGuestName("Ananya Sharma");
         setGuestEmail("ananya.wedding@example.com");
-        setGuestPhone("+91 98765 12345");
+        setGuestPhone(""); // Kept blank for safety so testers don't message strangers
         setMessage("Looking for a venue for my sister's destination wedding with about 250 guests in February 2027. We would need lawns, banquet catering, and complete villa buyouts.");
         break;
       case "offsite":
         setSource("EMAIL");
         setGuestName("Karan Mehta (Razorpay)");
         setGuestEmail("karan.mehta@techcorp.com");
-        setGuestPhone("+91 98111 22334");
+        setGuestPhone(""); // Kept blank for safety so testers don't message strangers
         setMessage("Hi Team, planning our annual leadership offsite for a team of 45 attendees in January 2027. We require high-speed WiFi, conference hall with projector, and coffee estate trail treks.");
         break;
       case "room":
         setSource("WHATSAPP");
         setGuestName("Dr. Vikram Rathore");
         setGuestEmail("vikram.rathore@gmail.com");
-        setGuestPhone("+91 94444 55555");
+        setGuestPhone(""); // Kept blank for safety so testers don't message strangers
         setMessage("Hello, is a coffee estate pool villa free 14-16 November for 2 adults and 1 child? Please let me know the best direct booking tariff.");
         break;
       case "complaint":
         setSource("WHATSAPP");
         setGuestName("Guest in Villa 104");
         setGuestEmail("staying.guest@resort.com");
-        setGuestPhone("+91 99999 88888");
+        setGuestPhone(""); // Kept blank for safety so testers don't message strangers
         setMessage("AC in my room 104 is not working, very hot and leaking water! Extremely poor service, please send someone immediately. Urgent complaint!");
         break;
       case "unsorted":
         setSource("WEB");
         setGuestName("Vague Inquirer");
         setGuestEmail("curious@yahoo.com");
-        setGuestPhone("+91 91234 56789");
+        setGuestPhone(""); // Kept blank for safety so testers don't message strangers
         setMessage("Can you help me? Need some information.");
         break;
     }
@@ -256,7 +256,7 @@ export function EventEnquiryWizard() {
               </label>
               <input
                 type="tel"
-                placeholder="e.g. +91 98765 43210"
+                placeholder="Enter your mobile number to test WhatsApp (optional)"
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
                 className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#384432]"
