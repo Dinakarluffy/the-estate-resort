@@ -512,7 +512,7 @@ The platform was built with a strict **hospitality-first architecture** conformi
 
 ## 4. Test Verification & Quality Metrics
 
-* **126 Unit & Integration Tests Passing (100% Green)**:
+* **130 Unit & Integration Tests Passing (100% Green)**:
   * `rates.test.ts` (19 tests): Dynamic matrix, inline editing, allotment floors, blackout conflicts, promo CRUD.
   * `export.test.ts` (12 tests): RFC 4180 CSV escaping, SAC 996311 CGST/SGST split, UTF-8 BOM, `CHECKED_IN`/`CHECKED_OUT` status transitions.
   * `booking.test.ts` (12 tests): Multi-night checkout, GST calculation, atomic inventory decrements.
@@ -522,7 +522,57 @@ The platform was built with a strict **hospitality-first architecture** conformi
   * `promo.test.ts` (8 tests): Percentage discount, max caps, date windows, minimum booking tariffs.
   * `payment.test.ts` (8 tests): Mock payment token generation and verification.
   * `gemini.test.ts` & `gemini-live.test.ts` (12 tests): Live Gemini 3.5 Flash connectivity & deterministic fallbacks.
-  * `enquiry.test.ts` (10 tests): AI classification, entity extraction, budget estimation, GM alert routing.
+  * `enquiry.test.ts` (14 tests): AI classification, entity extraction, budget estimation, GM alert routing, archive/restore, internal notes, deal calculation, duplicate detection.
 * **Production Build:** Compiled cleanly with zero errors across all 33 routes (`npx next build`).
 * **Local Git Version Control:** Clean local commit history with structured feature and fix messages.
+
+---
+
+### 🤖 Phase 5: Event Lead Form, Multi-Channel Simulator & AI Enquiry Inbox (With SLA Command & Real-World Operations)
+
+#### 1. Multi-Channel Lead Ingestion Engine (`/events` & `src/lib/enquiry.ts`)
+* Public destination gathering showcase for weddings, executive retreats, and family celebrations.
+* **1-Click IsoCode Reviewer Benchmark Simulator:**
+  * `ENQ-4410`: Sister's wedding in Feb 2027, 250 guests, 2 nights $\rightarrow$ Category `WEDDING`, extracts 250 pax, assigned to `STAFF`.
+  * `ENQ-4411`: Villa free 14-16 Nov for 2 adults and a child $\rightarrow$ Category `ROOM`, assigned to `STAFF`.
+  * `ENQ-4412`: Team of 45 wants January offsite with conference hall $\rightarrow$ Category `OFFSITE`, extracts 45 pax, assigned to `STAFF`.
+  * **Urgent Complaint Benchmark:** AC leaking in Villa 104 $\rightarrow$ Category `COMPLAINT`, auto-escalated to `GM`, `requiresGmReview = true`.
+  * **Vague / Low-Confidence Benchmark:** "Can you help me? Need info" $\rightarrow$ Category `UNSORTED`, confidence $<0.70$, routed to GM Unsorted Queue.
+* Multi-channel support: `WEB`, forwarded `EMAIL`, and simulated `WHATSAPP`.
+
+#### 2. AI Classification, Rate Grounding & Fallback Engine (`src/lib/gemini.ts`)
+* Live Gemini 3.5 Flash integration with structured JSON output schema.
+* **Zero-Hallucination Pricing Grounding:** Queries live database tariffs before drafting replies, strictly quoting real base tariffs (starting at ₹6,500/night for Planter's Heritage Room) rather than invented prices.
+* **High-Spike / Offline Fallback Engine:** If Google Gemini API returns HTTP 429 (quota limit) or hill-station internet disconnects, the deterministic heuristic engine takes over with 0ms downtime. Leads are never lost or dropped.
+
+#### 3. Staff Unified AI Enquiry Inbox (`/staff/dashboard`)
+* Responsive 2-column split view (5 cols list, 7 cols human-in-the-loop review card).
+* **Human-in-the-Loop Guarantee:** AI drafts replies, but **never sends replies automatically**. Staff or GM must review, edit, and click "Approve & Send".
+* **1-Click Category Re-route:** Staff can change category with 1 click (`WEDDING`, `OFFSITE`, `ROOM`, `COMPLAINT`, `UNSORTED`).
+* Category filters with live badges: `All Active`, `Weddings`, `Corporate`, `Rooms`, `Complaints`, and `GM Review Queue`.
+
+#### 4. Real-World Operational Gaps Solved in Phase 5
+1. **Sub-30 Minute Lead SLA Timer & Breach Warning:**
+   * Solves the brief's primary financial bottleneck (30% enquiries waiting over 24h, losing ₹1.72 Crore/year).
+   * Calculates elapsed minutes from creation:
+     * 🟢 `< 15m`: *SLA On Track*
+     * 🟡 `15–30m`: *SLA Warning*
+     * 🔴 `> 30m`: *⚠️ SLA Breached (>30m) — Revenue Risk*
+     * 🟢 Dispatched: *Resolved in Xm*
+2. **One-Click WhatsApp & Phone Dispatch (Zero-Config, Free Universal Deep Links):**
+   * Indian luxury guests overwhelmingly use WhatsApp. Staff can click:
+     * `💬 Send via WhatsApp Web`: Opens `https://wa.me/<phone>?text=<encodedReply>` with pre-filled approved quotation.
+     * `📞 Call Guest`: Opens phone dialer (`tel:<phone>`).
+   * 100% free, zero external API keys or subscriptions required.
+3. **Archive & Restore (Spam & Junk Dismissal):**
+   * Separates junk/spam from active sales leads. Staff can click **"Archive Lead"** to remove it from the active inbox, or view and restore via the **"🗄️ Archived"** tab.
+4. **Estimated Pipeline Deal Value Calculator:**
+   * Computes estimated revenue impact: Weddings (250 pax $\rightarrow$ ₹18L–₹25L), Corporate (45 pax $\rightarrow$ ₹4.5L–₹7.5L), Room Stays (₹13k–₹32k). Helps GM prioritize high-ticket enquiries.
+5. **Private Staff & GM Collaboration Notes:**
+   * Internal notes textarea persisted to `internalNotes` in the database. Notes are strictly private (hidden from the guest) with a `📝 Note` badge on the lead card.
+6. **1-Click Export Sales Pipeline to CSV:**
+   * GM and Head of Sales can download a standardized CSV file with 15 columns for weekly revenue and conversion meetings.
+7. **Duplicate Enquiry / Flood Detection Alert:**
+   * Cross-references phone and email to detect if a guest submitted multiple forms within 24 hours, displaying an alert banner to prevent staff from sending conflicting quotes.
+
 

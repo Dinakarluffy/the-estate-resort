@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Mail,
   Send,
@@ -18,6 +18,13 @@ import {
   ChevronDown,
   Edit3,
   Check,
+  Archive,
+  ArchiveRestore,
+  Download,
+  Phone,
+  Clock,
+  FileText,
+  TrendingUp,
 } from "lucide-react";
 
 interface EnquiryItem {
@@ -38,6 +45,7 @@ interface EnquiryItem {
   isAiGenerated: boolean;
   requiresGmReview: boolean;
   status: string; // NEW | REVIEWED | SENT | ARCHIVED
+  internalNotes?: string | null;
   createdAt: string;
 }
 
@@ -48,7 +56,9 @@ export function UnifiedEnquiryInbox() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEnquiry, setSelectedEnquiry] = useState<EnquiryItem | null>(null);
   const [draftText, setDraftText] = useState("");
+  const [noteText, setNoteText] = useState("");
   const [isEditingDraft, setIsEditingDraft] = useState(false);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
@@ -59,9 +69,13 @@ export function UnifiedEnquiryInbox() {
       const data = await res.json();
       if (data.success) {
         setEnquiries(data.enquiries);
-        if (data.enquiries.length > 0 && !selectedEnquiry) {
-          setSelectedEnquiry(data.enquiries[0]);
-          setDraftText(data.enquiries[0].draftReply || "");
+        if (data.enquiries.length > 0) {
+          // If no selection or previously selected item is updated, keep current or pick first
+          setSelectedEnquiry((prev) => {
+            if (!prev) return data.enquiries[0];
+            const found = data.enquiries.find((e: EnquiryItem) => e.id === prev.id);
+            return found || data.enquiries[0];
+          });
         }
       }
     } catch (err: any) {
@@ -75,6 +89,15 @@ export function UnifiedEnquiryInbox() {
     fetchEnquiries();
   }, []);
 
+  // Sync draft and internal notes whenever selected enquiry changes
+  useEffect(() => {
+    if (selectedEnquiry) {
+      setDraftText(selectedEnquiry.draftReply || "");
+      setNoteText(selectedEnquiry.internalNotes || "");
+      setIsEditingDraft(false);
+    }
+  }, [selectedEnquiry?.id]);
+
   const showToast = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 4000);
@@ -83,6 +106,7 @@ export function UnifiedEnquiryInbox() {
   const handleSelectEnquiry = (enquiry: EnquiryItem) => {
     setSelectedEnquiry(enquiry);
     setDraftText(enquiry.draftReply || "");
+    setNoteText(enquiry.internalNotes || "");
     setIsEditingDraft(false);
   };
 
@@ -138,7 +162,7 @@ export function UnifiedEnquiryInbox() {
     }
   };
 
-  // Save Draft Changes
+  // Save Draft Reply Changes
   const handleSaveDraft = async () => {
     if (!selectedEnquiry) return;
     setActionLoading(true);
@@ -165,31 +189,178 @@ export function UnifiedEnquiryInbox() {
     }
   };
 
-  // Filtering
-  const filteredList = enquiries.filter((e) => {
-    const matchesCat =
-      selectedCategory === "ALL"
-        ? true
-        : selectedCategory === "GM_REVIEW"
-        ? e.requiresGmReview
-        : e.category === selectedCategory;
+  // Save Internal Notes
+  const handleSaveNotes = async () => {
+    if (!selectedEnquiry) return;
+    setIsSavingNotes(true);
+    try {
+      const res = await fetch(`/api/staff/enquiries/${selectedEnquiry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateNotes",
+          internalNotes: noteText,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save internal notes");
 
-    const q = searchTerm.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      e.enquiryNumber.toLowerCase().includes(q) ||
-      e.rawMessage.toLowerCase().includes(q) ||
-      (e.guestName && e.guestName.toLowerCase().includes(q)) ||
-      (e.guestEmail && e.guestEmail.toLowerCase().includes(q));
+      showToast("success", `Internal notes saved for ${selectedEnquiry.enquiryNumber}`);
+      setSelectedEnquiry(data.enquiry);
+      fetchEnquiries();
+    } catch (err: any) {
+      showToast("error", err.message);
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
 
-    return matchesCat && matchesSearch;
-  });
+  // Archive / Restore Enquiry
+  const handleArchiveToggle = async (shouldArchive: boolean) => {
+    if (!selectedEnquiry) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/staff/enquiries/${selectedEnquiry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "archive",
+          archiveState: shouldArchive,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update archive status");
 
-  const weddingCount = enquiries.filter((e) => e.category === "WEDDING").length;
-  const offsiteCount = enquiries.filter((e) => e.category === "OFFSITE").length;
-  const roomCount = enquiries.filter((e) => e.category === "ROOM").length;
-  const complaintCount = enquiries.filter((e) => e.category === "COMPLAINT").length;
-  const gmReviewCount = enquiries.filter((e) => e.requiresGmReview).length;
+      showToast(
+        "success",
+        shouldArchive
+          ? `Enquiry ${selectedEnquiry.enquiryNumber} moved to Archive`
+          : `Enquiry ${selectedEnquiry.enquiryNumber} restored to Active Inbox`
+      );
+      setSelectedEnquiry(data.enquiry);
+      fetchEnquiries();
+    } catch (err: any) {
+      showToast("error", err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Export Sales Pipeline to CSV
+  const handleExportPipelineCsv = () => {
+    if (enquiries.length === 0) {
+      showToast("error", "No enquiries available to export");
+      return;
+    }
+
+    const headers = [
+      "Enquiry Number",
+      "Received Date",
+      "Channel",
+      "Category",
+      "Guest Name",
+      "Phone",
+      "Email",
+      "Pax / Guests",
+      "Event Dates",
+      "Est. Deal Value (INR)",
+      "Status",
+      "Assigned Role",
+      "Requires GM Review",
+      "Internal Notes",
+      "Message Text"
+    ];
+
+    const rows = enquiries.map((item) => [
+      `"${item.enquiryNumber}"`,
+      `"${new Date(item.createdAt).toLocaleString("en-IN")}"`,
+      `"${item.source}"`,
+      `"${item.category}"`,
+      `"${(item.guestName || "Prospective Guest").replace(/"/g, '""')}"`,
+      `"${item.guestPhone || ""}"`,
+      `"${item.guestEmail || ""}"`,
+      `"${item.extractedGuests || "N/A"}"`,
+      `"${(item.extractedDates || "N/A").replace(/"/g, '""')}"`,
+      `"${getEstimatedDealValue(item.category, item.extractedGuests)}"`,
+      `"${item.status}"`,
+      `"${item.assignedRole}"`,
+      `"${item.requiresGmReview ? "YES" : "NO"}"`,
+      `"${(item.internalNotes || "").replace(/"/g, '""')}"`,
+      `"${item.rawMessage.replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const today = new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `chikkamagaluru_resort_enquiries_${today}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast("success", `Exported ${enquiries.length} enquiries to CSV`);
+  };
+
+  // Duplicate Check for Selected Enquiry
+  const duplicateMatches = useMemo(() => {
+    if (!selectedEnquiry) return [];
+    return enquiries.filter((e) => {
+      if (e.id === selectedEnquiry.id) return false;
+      const phoneMatch =
+        e.guestPhone &&
+        selectedEnquiry.guestPhone &&
+        e.guestPhone.replace(/\D/g, "").slice(-10) ===
+          selectedEnquiry.guestPhone.replace(/\D/g, "").slice(-10);
+      const emailMatch =
+        e.guestEmail &&
+        selectedEnquiry.guestEmail &&
+        e.guestEmail.toLowerCase().trim() === selectedEnquiry.guestEmail.toLowerCase().trim();
+      return Boolean(phoneMatch || emailMatch);
+    });
+  }, [selectedEnquiry, enquiries]);
+
+  // Filtering Logic
+  const filteredList = useMemo(() => {
+    return enquiries.filter((e) => {
+      // Archive tab separation
+      if (selectedCategory === "ARCHIVED") {
+        if (e.status !== "ARCHIVED") return false;
+      } else {
+        // Active view: hide archived leads by default
+        if (e.status === "ARCHIVED") return false;
+
+        if (selectedCategory === "GM_REVIEW") {
+          if (!e.requiresGmReview) return false;
+        } else if (selectedCategory !== "ALL") {
+          if (e.category !== selectedCategory) return false;
+        }
+      }
+
+      // Keyword Search
+      const q = searchTerm.toLowerCase().trim();
+      if (!q) return true;
+
+      return (
+        e.enquiryNumber.toLowerCase().includes(q) ||
+        e.rawMessage.toLowerCase().includes(q) ||
+        (e.guestName && e.guestName.toLowerCase().includes(q)) ||
+        (e.guestEmail && e.guestEmail.toLowerCase().includes(q)) ||
+        (e.guestPhone && e.guestPhone.includes(q))
+      );
+    });
+  }, [enquiries, selectedCategory, searchTerm]);
+
+  // Category Counts (active only, excluding archived)
+  const activeEnquiries = enquiries.filter((e) => e.status !== "ARCHIVED");
+  const weddingCount = activeEnquiries.filter((e) => e.category === "WEDDING").length;
+  const offsiteCount = activeEnquiries.filter((e) => e.category === "OFFSITE").length;
+  const roomCount = activeEnquiries.filter((e) => e.category === "ROOM").length;
+  const complaintCount = activeEnquiries.filter((e) => e.category === "COMPLAINT").length;
+  const gmReviewCount = activeEnquiries.filter((e) => e.requiresGmReview).length;
+  const archivedCount = enquiries.filter((e) => e.status === "ARCHIVED").length;
 
   return (
     <div className="space-y-6">
@@ -225,27 +396,27 @@ export function UnifiedEnquiryInbox() {
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-300" />
             <h2 className="font-serif font-bold text-lg">
-              Gemini 3.5 Flash Unified AI Inbox
+              Gemini 3.5 Flash Unified AI Inbox & SLA Command
             </h2>
           </div>
           <p className="text-xs text-stone-300 mt-1 max-w-2xl">
-            Auto-classifies multi-channel leads (&lt;2 min response time), extracts event dates and guest counts, and drafts rate-grounded quotations. <strong>Human-in-the-loop guarantee: AI never sends replies automatically.</strong>
+            Multi-channel lead ingestion with sub-30 minute SLA response tracking, rate-grounded quotation drafting, and human-in-the-loop dispatch. <strong>Human-in-the-loop guarantee: AI never sends replies automatically.</strong>
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="bg-white/10 px-3.5 py-1.5 rounded-xl text-center border border-white/10">
-            <span className="text-[10px] uppercase text-stone-300 block font-bold">Latency</span>
-            <strong className="text-sm font-mono text-emerald-300">&lt; 2 Minutes</strong>
+            <span className="text-[10px] uppercase text-stone-300 block font-bold">SLA Target</span>
+            <strong className="text-sm font-mono text-emerald-300">&lt; 30 Mins</strong>
           </div>
           <div className="bg-white/10 px-3.5 py-1.5 rounded-xl text-center border border-white/10">
-            <span className="text-[10px] uppercase text-stone-300 block font-bold">Revenue Recovery</span>
+            <span className="text-[10px] uppercase text-stone-300 block font-bold">Pipeline Target</span>
             <strong className="text-sm font-mono text-amber-300">₹72L / Year</strong>
           </div>
         </div>
       </div>
 
-      {/* Category Tabs Bar */}
+      {/* Category Tabs & Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 pb-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -256,7 +427,7 @@ export function UnifiedEnquiryInbox() {
                 : "bg-white text-stone-600 border border-stone-200 hover:bg-stone-50"
             }`}
           >
-            All Messages ({enquiries.length})
+            All Active ({activeEnquiries.length})
           </button>
 
           <button
@@ -329,19 +500,46 @@ export function UnifiedEnquiryInbox() {
               {gmReviewCount}
             </span>
           </button>
+
+          {/* Archived Tab Filter */}
+          <button
+            onClick={() => setSelectedCategory("ARCHIVED")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              selectedCategory === "ARCHIVED"
+                ? "bg-stone-800 text-white shadow-xs"
+                : "bg-stone-100 text-stone-600 border border-stone-200 hover:bg-stone-200"
+            }`}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>Archived</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-stone-200 text-stone-800 text-[10px]">
+              {archivedCount}
+            </span>
+          </button>
         </div>
 
+        {/* Right Action Bar: Search, Export CSV, Refresh */}
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search enquiries..."
+              placeholder="Search enquiries, pax, names..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8 pr-3 py-1.5 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 focus:ring-[#384432]"
             />
           </div>
+
+          {/* 1-Click Export Enquiries to CSV */}
+          <button
+            onClick={handleExportPipelineCsv}
+            className="px-3 py-1.5 bg-[#384432] text-white hover:bg-[#283224] rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+            title="Export MICE & Room Leads to CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
 
           <button
             onClick={fetchEnquiries}
@@ -357,7 +555,7 @@ export function UnifiedEnquiryInbox() {
       {/* Main 2-Column Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Enquiries List (5 Cols) */}
-        <div className="lg:col-span-5 space-y-3 max-h-[750px] overflow-y-auto pr-1">
+        <div className="lg:col-span-5 space-y-3 max-h-[820px] overflow-y-auto pr-1">
           {filteredList.length === 0 ? (
             <div className="bg-white border border-[#ebded2] rounded-2xl p-8 text-center text-stone-400 text-xs">
               No enquiries match the selected filter.
@@ -365,11 +563,14 @@ export function UnifiedEnquiryInbox() {
           ) : (
             filteredList.map((item) => {
               const isSelected = selectedEnquiry?.id === item.id;
+              const sla = getSlaIndicator(item.createdAt, item.status);
+              const dealValue = getEstimatedDealValue(item.category, item.extractedGuests);
+
               return (
                 <div
                   key={item.id}
                   onClick={() => handleSelectEnquiry(item)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-xs space-y-2 relative ${
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-xs space-y-2.5 relative ${
                     isSelected
                       ? "bg-white border-[#384432] shadow-md ring-2 ring-[#384432]/20"
                       : "bg-white border-[#ebded2] hover:border-stone-400 hover:shadow-xs"
@@ -381,7 +582,7 @@ export function UnifiedEnquiryInbox() {
                       : ""
                   }`}
                 >
-                  {/* Top Meta Line */}
+                  {/* Top Meta Line: Reference, Channel, Status */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold text-stone-900">
@@ -400,30 +601,48 @@ export function UnifiedEnquiryInbox() {
                       </span>
                     </div>
 
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        item.status === "SENT"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : item.status === "REVIEWED"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {item.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {item.internalNotes && (
+                        <span
+                          title="Internal Note Attached"
+                          className="p-1 rounded bg-amber-50 text-amber-700 border border-amber-200"
+                        >
+                          <FileText className="w-3 h-3" />
+                        </span>
+                      )}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                          item.status === "SENT"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : item.status === "REVIEWED"
+                            ? "bg-blue-100 text-blue-800"
+                            : item.status === "ARCHIVED"
+                            ? "bg-stone-200 text-stone-700"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Category & Confidence Badge */}
-                  <div className="flex items-center gap-2">
+                  {/* Category, Estimated Deal Value, SLA Badge */}
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <CategoryBadge category={item.category} />
-                    <span className="text-[10px] text-stone-400 font-mono">
-                      {Math.round(item.confidenceScore * 100)}% match
-                    </span>
-                    {item.requiresGmReview && (
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                        GM Review
+
+                    {dealValue && (
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        {dealValue}
                       </span>
                     )}
+
+                    {/* SLA Timer Pill */}
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded border flex items-center gap-1 ${sla.className}`}
+                    >
+                      <Clock className="w-2.5 h-2.5" />
+                      <span>{sla.label}</span>
+                    </span>
                   </div>
 
                   {/* Message Preview */}
@@ -432,11 +651,11 @@ export function UnifiedEnquiryInbox() {
                   </p>
 
                   {/* Guest Contact & Timestamp */}
-                  <div className="flex items-center justify-between text-[11px] text-stone-400 pt-1 border-t border-stone-100">
-                    <span className="font-semibold text-stone-600">
+                  <div className="flex items-center justify-between text-[11px] text-stone-400 pt-1.5 border-t border-stone-100">
+                    <span className="font-semibold text-stone-600 truncate max-w-[180px]">
                       {item.guestName || "Prospective Guest"}
                     </span>
-                    <span className="font-mono">
+                    <span className="font-mono text-[10px]">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -450,16 +669,16 @@ export function UnifiedEnquiryInbox() {
         <div className="lg:col-span-7">
           {selectedEnquiry ? (
             <div className="bg-white border border-[#ebded2] rounded-2xl shadow-sm p-6 space-y-6">
-              {/* Header Info */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+              {/* Header Info & Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-stone-100 pb-4">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-serif font-bold text-lg text-stone-900">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-serif font-bold text-xl text-stone-900">
                       {selectedEnquiry.enquiryNumber}
                     </h3>
                     <CategoryBadge category={selectedEnquiry.category} />
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${
                         selectedEnquiry.source === "WHATSAPP"
                           ? "bg-emerald-100 text-emerald-800"
                           : selectedEnquiry.source === "EMAIL"
@@ -470,32 +689,93 @@ export function UnifiedEnquiryInbox() {
                       {selectedEnquiry.source} Channel
                     </span>
                   </div>
-                  <p className="text-xs text-stone-500 mt-1">
-                    From: <strong className="text-stone-800">{selectedEnquiry.guestName}</strong>
-                    {selectedEnquiry.guestEmail && ` • ${selectedEnquiry.guestEmail}`}
-                    {selectedEnquiry.guestPhone && ` • ${selectedEnquiry.guestPhone}`}
+
+                  <p className="text-xs text-stone-500 mt-1.5 flex flex-wrap items-center gap-2">
+                    <span>From: <strong className="text-stone-800">{selectedEnquiry.guestName}</strong></span>
+                    {selectedEnquiry.guestEmail && <span>• {selectedEnquiry.guestEmail}</span>}
+                    {selectedEnquiry.guestPhone && <span>• {selectedEnquiry.guestPhone}</span>}
                   </p>
+
+                  {/* Quick Contact Links: Call & WhatsApp */}
+                  {selectedEnquiry.guestPhone && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <a
+                        href={`tel:${selectedEnquiry.guestPhone}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-medium transition"
+                      >
+                        <Phone className="w-3 h-3 text-stone-600" />
+                        <span>Call Guest</span>
+                      </a>
+
+                      <a
+                        href={`https://wa.me/${selectedEnquiry.guestPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                          draftText || selectedEnquiry.draftReply || ""
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold transition border border-emerald-200"
+                        title="Open WhatsApp with approved reply pre-filled"
+                      >
+                        <MessageSquare className="w-3 h-3 text-emerald-600" />
+                        <span>Send via WhatsApp Web</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
 
-                {/* 1-Click Re-Route Dropdown */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-stone-400 font-bold">Re-Route:</span>
-                  <select
-                    value={selectedEnquiry.category}
-                    onChange={(e) => handleReroute(e.target.value as any)}
-                    disabled={actionLoading}
-                    className="p-1.5 border border-stone-300 rounded-lg text-xs font-semibold bg-stone-50 text-stone-800 focus:outline-none"
-                  >
-                    <option value="WEDDING">🎊 Wedding</option>
-                    <option value="OFFSITE">💼 Corporate Offsite</option>
-                    <option value="ROOM">🛏️ Room Booking</option>
-                    <option value="COMPLAINT">⚠️ Complaint (GM)</option>
-                    <option value="UNSORTED">🤷 Unsorted (GM)</option>
-                  </select>
+                {/* Right Top Controls: Re-Route & Archive Toggle */}
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-stone-400 font-bold">Re-Route:</span>
+                    <select
+                      value={selectedEnquiry.category}
+                      onChange={(e) => handleReroute(e.target.value as any)}
+                      disabled={actionLoading}
+                      className="p-1.5 border border-stone-300 rounded-lg text-xs font-semibold bg-stone-50 text-stone-800 focus:outline-none"
+                    >
+                      <option value="WEDDING">🎊 Wedding</option>
+                      <option value="OFFSITE">💼 Corporate Offsite</option>
+                      <option value="ROOM">🛏️ Room Booking</option>
+                      <option value="COMPLAINT">⚠️ Complaint (GM)</option>
+                      <option value="UNSORTED">🤷 Unsorted (GM)</option>
+                    </select>
+                  </div>
+
+                  {/* Archive / Restore Button */}
+                  {selectedEnquiry.status === "ARCHIVED" ? (
+                    <button
+                      onClick={() => handleArchiveToggle(false)}
+                      disabled={actionLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-lg transition border border-stone-300"
+                    >
+                      <ArchiveRestore className="w-3 h-3" />
+                      <span>Restore to Active Inbox</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleArchiveToggle(true)}
+                      disabled={actionLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-stone-50 hover:bg-stone-100 text-stone-500 hover:text-stone-700 text-xs font-medium rounded-lg transition border border-stone-200"
+                      title="Archive lead / dismiss spam"
+                    >
+                      <Archive className="w-3 h-3" />
+                      <span>Archive Lead</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Service Complaint Alert Banner if Category === COMPLAINT */}
+              {/* Duplicate Enquiry Warning Banner */}
+              {duplicateMatches.length > 0 && (
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-3.5 flex items-start gap-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-900">
+                    <strong>Duplicate Inquiry Alert:</strong> Found {duplicateMatches.length} previous inquiry from this contact ({duplicateMatches.map((d) => d.enquiryNumber).join(", ")}). Coordinate with sales desk to avoid sending conflicting quotations.
+                  </div>
+                </div>
+              )}
+
+              {/* Service Complaint Alert Banner */}
               {selectedEnquiry.category === "COMPLAINT" && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -504,7 +784,7 @@ export function UnifiedEnquiryInbox() {
                       ⚠️ Urgent Service Complaint Alert — GM Dispatched
                     </strong>
                     <span className="text-red-800">
-                      This enquiry was flagged as an urgent guest dissatisfaction issue. Escalated automatically to General Manager Vikram Hegde with immediate service engineer dispatch.
+                      Flagged as an urgent guest dissatisfaction issue. Escalated automatically to General Manager Vikram Hegde with immediate service engineer dispatch.
                     </span>
                   </div>
                 </div>
@@ -519,7 +799,7 @@ export function UnifiedEnquiryInbox() {
                       🤷 Low Confidence (&lt;0.70) — Unsorted Lane
                     </strong>
                     <span className="text-amber-800">
-                      The AI router detected ambiguous or incomplete details. Manual review required by Reservations GM before responding.
+                      Ambiguous or incomplete enquiry details. Manual review required by Reservations GM before responding.
                     </span>
                   </div>
                 </div>
@@ -535,10 +815,10 @@ export function UnifiedEnquiryInbox() {
                 </div>
               </div>
 
-              {/* Extracted Entity Chips */}
+              {/* Extracted Entity Chips & Financial Pipeline Value */}
               <div>
                 <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-2">
-                  AI Extracted Details (Gemini 3.5 Flash)
+                  AI Extracted Details & Estimated Pipeline Impact
                 </span>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   {selectedEnquiry.extractedDates ? (
@@ -563,6 +843,12 @@ export function UnifiedEnquiryInbox() {
                     </span>
                   )}
 
+                  {/* Estimated Deal Value Badge */}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-950 border border-amber-200 font-bold">
+                    <TrendingUp className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Est. Deal: {getEstimatedDealValue(selectedEnquiry.category, selectedEnquiry.extractedGuests)}</span>
+                  </div>
+
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 text-stone-700 border border-stone-200 font-mono">
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                     <span>Confidence: {Math.round(selectedEnquiry.confidenceScore * 100)}%</span>
@@ -582,7 +868,7 @@ export function UnifiedEnquiryInbox() {
                 </div>
 
                 <textarea
-                  rows={8}
+                  rows={7}
                   value={draftText}
                   onChange={(e) => {
                     setDraftText(e.target.value);
@@ -592,7 +878,7 @@ export function UnifiedEnquiryInbox() {
                   placeholder="AI-generated draft reply..."
                 />
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                   <div className="text-[11px] text-stone-500 flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Human Approval Required • AI Never Sends Automatically</span>
@@ -620,10 +906,46 @@ export function UnifiedEnquiryInbox() {
                   </div>
                 </div>
               </div>
+
+              {/* Private Staff & GM Collaboration Notes Section */}
+              <div className="border-t border-stone-200 pt-5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-stone-500" />
+                    <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                      Private Staff & GM Collaboration Notes (Hidden from Guest)
+                    </span>
+                  </div>
+                  {selectedEnquiry.internalNotes && (
+                    <span className="text-[10px] text-emerald-700 font-semibold">
+                      ✓ Note Persisted
+                    </span>
+                  )}
+                </div>
+
+                <textarea
+                  rows={2}
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="Add private staff notes (e.g. 'Guest requested pure Jain catering; Lawn B confirmed free on Feb 14; Followed up via phone call on 08 Nov')..."
+                  className="w-full p-3 border border-stone-200 rounded-xl text-xs text-stone-800 bg-stone-50/70 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#384432]"
+                />
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveNotes}
+                    disabled={isSavingNotes || actionLoading}
+                    className="px-3.5 py-1.5 bg-stone-800 hover:bg-stone-900 text-white rounded-xl text-xs font-semibold transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Check className="w-3 h-3" />
+                    <span>{isSavingNotes ? "Saving..." : "Save Note"}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="bg-white border border-[#ebded2] rounded-2xl p-12 text-center text-stone-400 text-xs">
-              Select an enquiry from the left to view details and approve the AI draft.
+              Select an enquiry from the left to view details, notes, and approve the AI draft.
             </div>
           )}
         </div>
@@ -665,5 +987,64 @@ function CategoryBadge({ category }: { category: EnquiryItem["category"] }) {
           🤷 Unsorted Lane
         </span>
       );
+  }
+}
+
+function getSlaIndicator(createdAt: string, status: string): { label: string; className: string } {
+  if (status === "SENT") {
+    return {
+      label: "Resolved",
+      className: "bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold",
+    };
+  }
+
+  if (status === "ARCHIVED") {
+    return {
+      label: "Archived",
+      className: "bg-stone-100 text-stone-600 border-stone-200",
+    };
+  }
+
+  const elapsedMs = Date.now() - new Date(createdAt).getTime();
+  const elapsedMins = Math.max(1, Math.round(elapsedMs / (1000 * 60)));
+
+  if (elapsedMins < 15) {
+    return {
+      label: `${elapsedMins}m • SLA On Track`,
+      className: "bg-emerald-50 text-emerald-800 border-emerald-300 font-medium",
+    };
+  } else if (elapsedMins <= 30) {
+    return {
+      label: `${elapsedMins}m • SLA Warning`,
+      className: "bg-amber-50 text-amber-800 border-amber-300 font-bold",
+    };
+  } else {
+    return {
+      label: `⚠️ ${elapsedMins}m • SLA Breached`,
+      className: "bg-red-50 text-red-900 border-red-300 font-bold",
+    };
+  }
+}
+
+function getEstimatedDealValue(category: string, pax?: number | null): string {
+  switch (category) {
+    case "WEDDING":
+      if (pax && pax >= 200) return "Est. ₹18L – ₹25L";
+      if (pax && pax >= 100) return "Est. ₹12L – ₹18L";
+      return "Est. ₹12L – ₹20L";
+
+    case "OFFSITE":
+      if (pax && pax > 0) return `Est. ₹${Math.round(pax * 0.11)}L – ₹${Math.round(pax * 0.17)}L`;
+      return "Est. ₹4.5L – ₹8.0L";
+
+    case "ROOM":
+      return "Est. ₹13k – ₹32k";
+
+    case "COMPLAINT":
+      return "Service SLA (Critical)";
+
+    case "UNSORTED":
+    default:
+      return "Pending Qualification";
   }
 }

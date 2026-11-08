@@ -5,6 +5,9 @@ import {
   updateEnquiryDraft,
   approveAndSendEnquiry,
   rerouteEnquiry,
+  archiveEnquiry,
+  updateEnquiryNotes,
+  checkDuplicateEnquiries,
 } from "@/lib/enquiry";
 
 async function verifyStaffOrGm() {
@@ -29,7 +32,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { action, draftReply, category, assignedRole } = body;
+    const { action, draftReply, category, assignedRole, archiveState, internalNotes } = body;
 
     if (action === "updateDraft") {
       if (!draftReply) {
@@ -52,7 +55,17 @@ export async function PATCH(
       return NextResponse.json({ success: true, enquiry: updated });
     }
 
-    return NextResponse.json({ error: "Invalid action. Supported: updateDraft, approveAndSend, reroute" }, { status: 400 });
+    if (action === "archive") {
+      const updated = await archiveEnquiry(id, archiveState ?? true);
+      return NextResponse.json({ success: true, enquiry: updated });
+    }
+
+    if (action === "updateNotes") {
+      const updated = await updateEnquiryNotes(id, internalNotes || "");
+      return NextResponse.json({ success: true, enquiry: updated });
+    }
+
+    return NextResponse.json({ error: "Invalid action. Supported: updateDraft, approveAndSend, reroute, archive, updateNotes" }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }

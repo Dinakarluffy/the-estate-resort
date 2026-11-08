@@ -176,3 +176,113 @@ export async function rerouteEnquiry(
     },
   });
 }
+
+/**
+ * Archive or Restore Enquiry (clears spam/junk from active pipeline)
+ */
+export async function archiveEnquiry(id: string, archiveState: boolean = true) {
+  return prisma.enquiry.update({
+    where: { id },
+    data: {
+      status: archiveState ? "ARCHIVED" : "NEW",
+    },
+  });
+}
+
+/**
+ * Updates private internal staff collaboration notes
+ */
+export async function updateEnquiryNotes(id: string, notes: string) {
+  return prisma.enquiry.update({
+    where: { id },
+    data: {
+      internalNotes: notes.trim(),
+    },
+  });
+}
+
+/**
+ * Computes an estimated revenue deal value for sales prioritization
+ */
+export function calculateEstimatedDealValue(
+  category: string,
+  extractedGuests?: number | null,
+  extractedDates?: string | null
+): string {
+  switch (category) {
+    case "WEDDING":
+      if (extractedGuests && extractedGuests >= 200) {
+        return "₹18,00,000 – ₹25,00,000";
+      } else if (extractedGuests && extractedGuests >= 100) {
+        return "₹12,00,000 – ₹18,00,000";
+      } else if (extractedGuests && extractedGuests > 0) {
+        const minVal = Math.round(extractedGuests * 6500 * 2);
+        const maxVal = Math.round(extractedGuests * 9500 * 2);
+        return `₹${minVal.toLocaleString("en-IN")} – ₹${maxVal.toLocaleString("en-IN")}`;
+      }
+      return "₹12,00,000 – ₹20,00,000";
+
+    case "OFFSITE":
+      if (extractedGuests && extractedGuests > 0) {
+        const minVal = Math.round(extractedGuests * 5500 * 2);
+        const maxVal = Math.round(extractedGuests * 8500 * 2);
+        return `₹${minVal.toLocaleString("en-IN")} – ₹${maxVal.toLocaleString("en-IN")}`;
+      }
+      return "₹4,50,000 – ₹8,00,000";
+
+    case "ROOM":
+      return "₹13,000 – ₹32,000 (2 Nights)";
+
+    case "COMPLAINT":
+      return "Immediate Service SLA (Critical)";
+
+    case "UNSORTED":
+    default:
+      return "Pending Lead Qualification";
+  }
+}
+
+/**
+ * Duplicate lead detector: Checks if phone or email matches prior leads in last 24h
+ */
+export async function checkDuplicateEnquiries(
+  guestPhone?: string | null,
+  guestEmail?: string | null,
+  excludeId?: string
+): Promise<{ isDuplicate: boolean; count: number; previousNumbers: string[] }> {
+  if (!guestPhone && !guestEmail) {
+    return { isDuplicate: false, count: 0, previousNumbers: [] };
+  }
+
+  const conditions: any[] = [];
+  if (guestEmail && guestEmail.trim()) {
+    conditions.push({ guestEmail: { equals: guestEmail.trim() } });
+  }
+  if (guestPhone && guestPhone.trim()) {
+    const rawDigits = guestPhone.replace(/\D/g, "");
+    if (rawDigits.length >= 7) {
+      conditions.push({ guestPhone: { contains: rawDigits.slice(-10) } });
+    }
+  }
+
+  if (conditions.length === 0) {
+    return { isDuplicate: false, count: 0, previousNumbers: [] };
+  }
+
+  const matches = await prisma.enquiry.findMany({
+    where: {
+      AND: [
+        { id: { not: excludeId || "" } },
+        { OR: conditions },
+      ],
+    },
+    select: { enquiryNumber: true },
+    take: 5,
+  });
+
+  return {
+    isDuplicate: matches.length > 0,
+    count: matches.length,
+    previousNumbers: matches.map((m) => m.enquiryNumber),
+  };
+}

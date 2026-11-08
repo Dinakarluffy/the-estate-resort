@@ -7,6 +7,10 @@ import {
   updateEnquiryDraft,
   approveAndSendEnquiry,
   rerouteEnquiry,
+  archiveEnquiry,
+  updateEnquiryNotes,
+  calculateEstimatedDealValue,
+  checkDuplicateEnquiries,
 } from "./enquiry";
 
 const prisma = new PrismaClient();
@@ -127,6 +131,46 @@ describe("enquiry.ts - AI Enquiry Routing, Entity Extraction & Human-in-the-Loop
       expect(rerouted.category).toBe("COMPLAINT");
       expect(rerouted.assignedRole).toBe("GM");
       expect(rerouted.requiresGmReview).toBe(true);
+    });
+  });
+
+  describe("Real-World Operational Extensions", () => {
+    it("archives and restores enquiry", async () => {
+      const archived = await archiveEnquiry(testEnquiryId, true);
+      expect(archived.status).toBe("ARCHIVED");
+
+      const restored = await archiveEnquiry(testEnquiryId, false);
+      expect(restored.status).toBe("NEW");
+    });
+
+    it("persists private internal staff notes", async () => {
+      const updated = await updateEnquiryNotes(
+        testEnquiryId,
+        "Checked lawn availability; offered amphitheater layout."
+      );
+      expect(updated.internalNotes).toBe(
+        "Checked lawn availability; offered amphitheater layout."
+      );
+    });
+
+    it("calculates estimated deal values by category and pax", () => {
+      const weddingDeal = calculateEstimatedDealValue("WEDDING", 250);
+      expect(weddingDeal).toBe("₹18,00,000 – ₹25,00,000");
+
+      const offsiteDeal = calculateEstimatedDealValue("OFFSITE", 45);
+      expect(offsiteDeal).toContain("₹");
+
+      const roomDeal = calculateEstimatedDealValue("ROOM");
+      expect(roomDeal).toContain("₹13,000");
+    });
+
+    it("detects duplicate leads by phone or email", async () => {
+      const dupCheck = await checkDuplicateEnquiries(
+        "+91 98888 77777",
+        "enquiry.test@example.com"
+      );
+      expect(dupCheck.isDuplicate).toBe(true);
+      expect(dupCheck.count).toBeGreaterThanOrEqual(1);
     });
   });
 });
