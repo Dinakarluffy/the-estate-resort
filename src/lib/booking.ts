@@ -356,8 +356,8 @@ export async function extendBookingStay(
     throw new Error(`Booking ${bookingId} not found`);
   }
 
-  if (booking.status !== "CONFIRMED") {
-    throw new Error("Cannot extend a booking that is not confirmed");
+  if (booking.status !== "CONFIRMED" && booking.status !== "CHECKED_IN") {
+    throw new Error("Cannot extend a booking that is not active (confirmed or checked-in)");
   }
 
   if (newCheckOut <= booking.checkOut) {
