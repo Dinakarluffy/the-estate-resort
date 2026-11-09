@@ -1,12 +1,10 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { verifySessionToken } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { ShieldCheck, AlertTriangle, CheckCircle2, Sliders, Users } from "lucide-react";
 import { SignOutButton } from "@/components/SignOutButton";
 import { UserManager } from "@/components/admin/UserManager";
-
-const prisma = new PrismaClient();
 
 export default async function AdminDashboardPage() {
   const cookieStore = cookies();
