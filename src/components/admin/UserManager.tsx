@@ -2,7 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { User, ShieldCheck, Coffee, Trash2, Search, AlertCircle, CheckCircle2, Loader2, Lock, AlertTriangle } from "lucide-react";
+import {
+  User,
+  ShieldCheck,
+  Coffee,
+  Trash2,
+  Search,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Lock,
+  AlertTriangle,
+  Phone,
+  Mail,
+  Calendar,
+} from "lucide-react";
 
 interface UserRecord {
   id: string;
@@ -113,11 +127,11 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
   );
 
   return (
-    <div className="bg-white border border-[#ebded2] rounded-2xl p-6 shadow-sm space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="bg-white border border-[#ebded2] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="text-lg font-serif font-bold text-stone-900 flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-amber-700" />
+          <h2 className="text-base sm:text-lg font-serif font-bold text-stone-900 flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0" />
             <span>Staff & User Role Administration</span>
           </h2>
           <p className="text-xs text-stone-500 mt-1">
@@ -126,7 +140,7 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
         </div>
 
         {/* Search Input */}
-        <div className="relative w-full md:w-64">
+        <div className="relative w-full sm:w-64 shrink-0">
           <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
           <input
             type="text"
@@ -139,9 +153,9 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
       </div>
 
       {/* Peer Protection Banner */}
-      <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-        <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-        <span>
+      <div className="p-3 sm:p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+        <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+        <span className="leading-relaxed">
           <strong>Executive Peer Protection:</strong> You can promote staff members to General Manager. However, once an account is a General Manager, it is protected from being demoted or deleted by fellow GMs (requires Resort Owner authorization).
         </span>
       </div>
@@ -173,140 +187,282 @@ export function UserManager({ currentAdminId }: UserManagerProps) {
           No matching user accounts found.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-stone-200 text-stone-500 uppercase tracking-wider text-[10px]">
-                <th className="py-2.5 px-3">User</th>
-                <th className="py-2.5 px-3">Contact</th>
-                <th className="py-2.5 px-3">Current Role</th>
-                <th className="py-2.5 px-3 text-right">Role Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100">
-              {filteredUsers.map((u) => {
-                const isCurrentAdmin = u.id === currentAdminId;
-                const isFellowGm = u.role === "GM" && !isCurrentAdmin;
-                const isUpdating = updatingId === u.id;
-                const isDeleting = deletingId === u.id;
+        <>
+          {/* Mobile Card View (shown on screens < md) */}
+          <div className="space-y-3 md:hidden">
+            {filteredUsers.map((u) => {
+              const isCurrentAdmin = u.id === currentAdminId;
+              const isFellowGm = u.role === "GM" && !isCurrentAdmin;
+              const isUpdating = updatingId === u.id;
+              const isDeleting = deletingId === u.id;
 
-                return (
-                  <tr key={u.id} className="hover:bg-stone-50/70 transition">
-                    <td className="py-3 px-3">
-                      <div className="font-semibold text-stone-900 flex items-center gap-1.5">
+              return (
+                <div
+                  key={u.id}
+                  className="p-4 rounded-xl border border-stone-200 bg-stone-50/40 hover:bg-stone-50/80 transition space-y-3 text-xs"
+                >
+                  {/* Card Header: Name + Badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-stone-900 text-sm flex items-center gap-1.5 flex-wrap">
                         <span>{u.name}</span>
                         {isCurrentAdmin ? (
                           <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
                             You (Active GM)
                           </span>
                         ) : isFellowGm ? (
-                          <span className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded flex items-center gap-1">
-                            <Lock className="w-2.5 h-2.5" /> Peer GM
+                          <span className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded flex items-center gap-1 font-medium border border-stone-200">
+                            <Lock className="w-2.5 h-2.5 text-stone-500" /> Peer GM
                           </span>
                         ) : null}
                       </div>
-                      <div className="text-[11px] text-stone-400 font-mono mt-0.5">
-                        {u.email}
+                      <div className="text-[11px] text-stone-500 font-mono mt-0.5 truncate flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-stone-400 shrink-0" />
+                        <span className="truncate">{u.email}</span>
                       </div>
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-3 text-stone-600">
-                      <div>{u.phone || "—"}</div>
-                      <div className="text-[10px] text-stone-400">
-                        Joined {new Date(u.createdAt).toLocaleDateString()}
-                      </div>
-                    </td>
-
-                    <td className="py-3 px-3">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          u.role === "GM"
-                            ? "bg-amber-100 text-amber-900 border border-amber-300"
-                            : u.role === "STAFF"
-                            ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                            : "bg-stone-100 text-stone-700 border border-stone-200"
-                        }`}
-                      >
-                        {u.role === "GM" ? (
-                          <ShieldCheck className="w-3 h-3 text-amber-700" />
-                        ) : u.role === "STAFF" ? (
-                          <Coffee className="w-3 h-3 text-emerald-700" />
-                        ) : (
-                          <User className="w-3 h-3 text-stone-500" />
-                        )}
-                        <span>{u.role}</span>
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-3 text-right">
-                      {isCurrentAdmin ? (
-                        <span className="text-[11px] text-stone-400 italic">
-                          Protected (Your Account)
-                        </span>
-                      ) : isFellowGm ? (
-                        <span className="text-[11px] text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200 inline-flex items-center gap-1">
-                          <Lock className="w-3 h-3 text-amber-600" /> Protected (Peer GM)
-                        </span>
+                    {/* Role Pill */}
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
+                        u.role === "GM"
+                          ? "bg-amber-100 text-amber-900 border border-amber-300"
+                          : u.role === "STAFF"
+                          ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                          : "bg-stone-100 text-stone-700 border border-stone-200"
+                      }`}
+                    >
+                      {u.role === "GM" ? (
+                        <ShieldCheck className="w-3 h-3 text-amber-700" />
+                      ) : u.role === "STAFF" ? (
+                        <Coffee className="w-3 h-3 text-emerald-700" />
                       ) : (
-                        <div className="inline-flex items-center gap-2">
-                          {/* Role Select Dropdown */}
+                        <User className="w-3 h-3 text-stone-500" />
+                      )}
+                      <span>{u.role}</span>
+                    </span>
+                  </div>
+
+                  {/* Card Meta: Contact & Joined */}
+                  <div className="flex items-center justify-between pt-2.5 border-t border-stone-200/60 text-[11px] text-stone-500">
+                    <div className="flex items-center gap-1.5 text-stone-600">
+                      <Phone className="w-3 h-3 text-stone-400" />
+                      <span className="font-mono">{u.phone || "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-stone-400">
+                      <Calendar className="w-3 h-3" />
+                      <span>Joined {new Date(u.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="pt-2.5 border-t border-stone-200/60">
+                    {isCurrentAdmin ? (
+                      <div className="text-[11px] text-stone-400 italic text-center py-1">
+                        Protected (Your Account)
+                      </div>
+                    ) : isFellowGm ? (
+                      <div className="text-[11px] text-amber-800 font-medium bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200 flex items-center justify-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Protected (Peer GM — Resort Owner Authorization)</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {/* Role Select Dropdown */}
+                        <div className="flex-1">
                           <select
                             disabled={isUpdating || isDeleting}
                             value={u.role}
                             onChange={(e) =>
                               handleRoleChange(u.id, e.target.value as "GUEST" | "STAFF" | "GM")
                             }
-                            className="text-xs bg-white border border-stone-300 rounded px-2 py-1 font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#546a4a] disabled:opacity-50"
+                            className="w-full text-xs bg-white border border-stone-300 rounded-lg px-2 py-1.5 font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#546a4a] disabled:opacity-50"
                           >
                             <option value="GUEST">GUEST</option>
                             <option value="STAFF">STAFF</option>
                             <option value="GM">GM</option>
                           </select>
+                        </div>
 
-                          {/* Quick 1-Click Promote / Demote */}
-                          {u.role === "GUEST" ? (
-                            <button
-                              type="button"
-                              disabled={isUpdating || isDeleting}
-                              onClick={() => handleRoleChange(u.id, "STAFF")}
-                              className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[11px] font-semibold transition disabled:opacity-50"
-                            >
-                              Promote to Staff
-                            </button>
-                          ) : u.role === "STAFF" ? (
-                            <button
-                              type="button"
-                              disabled={isUpdating || isDeleting}
-                              onClick={() => handleRoleChange(u.id, "GM")}
-                              className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded text-[11px] font-semibold transition disabled:opacity-50"
-                            >
-                              Promote to GM
-                            </button>
-                          ) : null}
-
-                          {/* In-App Delete Button (Triggers modern custom modal) */}
+                        {/* Quick 1-Click Promote */}
+                        {u.role === "GUEST" ? (
                           <button
                             type="button"
-                            title="Delete User Account"
                             disabled={isUpdating || isDeleting}
-                            onClick={() => setUserToDelete({ id: u.id, name: u.name })}
-                            className="p-1 text-stone-400 hover:text-red-600 rounded transition disabled:opacity-50"
+                            onClick={() => handleRoleChange(u.id, "STAFF")}
+                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-semibold transition disabled:opacity-50 shrink-0"
                           >
-                            {isDeleting ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-3.5 h-3.5" />
-                            )}
+                            Promote to Staff
                           </button>
+                        ) : u.role === "STAFF" ? (
+                          <button
+                            type="button"
+                            disabled={isUpdating || isDeleting}
+                            onClick={() => handleRoleChange(u.id, "GM")}
+                            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-semibold transition disabled:opacity-50 shrink-0"
+                          >
+                            Promote to GM
+                          </button>
+                        ) : null}
+
+                        {/* Delete Button */}
+                        <button
+                          type="button"
+                          title="Delete User Account"
+                          disabled={isUpdating || isDeleting}
+                          onClick={() => setUserToDelete({ id: u.id, name: u.name })}
+                          className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-stone-200 transition disabled:opacity-50 shrink-0"
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop & Tablet Table (shown on screens >= md) */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[620px]">
+              <thead>
+                <tr className="border-b border-stone-200 text-stone-500 uppercase tracking-wider text-[10px]">
+                  <th className="py-2.5 px-3">User</th>
+                  <th className="py-2.5 px-3">Contact</th>
+                  <th className="py-2.5 px-3">Current Role</th>
+                  <th className="py-2.5 px-3 text-right">Role Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {filteredUsers.map((u) => {
+                  const isCurrentAdmin = u.id === currentAdminId;
+                  const isFellowGm = u.role === "GM" && !isCurrentAdmin;
+                  const isUpdating = updatingId === u.id;
+                  const isDeleting = deletingId === u.id;
+
+                  return (
+                    <tr key={u.id} className="hover:bg-stone-50/70 transition">
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-stone-900 flex items-center gap-1.5">
+                          <span>{u.name}</span>
+                          {isCurrentAdmin ? (
+                            <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">
+                              You (Active GM)
+                            </span>
+                          ) : isFellowGm ? (
+                            <span className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <Lock className="w-2.5 h-2.5" /> Peer GM
+                            </span>
+                          ) : null}
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        <div className="text-[11px] text-stone-400 font-mono mt-0.5">
+                          {u.email}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3 text-stone-600 whitespace-nowrap">
+                        <div className="font-mono">{u.phone || "—"}</div>
+                        <div className="text-[10px] text-stone-400">
+                          Joined {new Date(u.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            u.role === "GM"
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : u.role === "STAFF"
+                              ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                              : "bg-stone-100 text-stone-700 border border-stone-200"
+                          }`}
+                        >
+                          {u.role === "GM" ? (
+                            <ShieldCheck className="w-3 h-3 text-amber-700" />
+                          ) : u.role === "STAFF" ? (
+                            <Coffee className="w-3 h-3 text-emerald-700" />
+                          ) : (
+                            <User className="w-3 h-3 text-stone-500" />
+                          )}
+                          <span>{u.role}</span>
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3 text-right">
+                        {isCurrentAdmin ? (
+                          <span className="text-[11px] text-stone-400 italic">
+                            Protected (Your Account)
+                          </span>
+                        ) : isFellowGm ? (
+                          <span className="text-[11px] text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200 inline-flex items-center gap-1 whitespace-nowrap">
+                            <Lock className="w-3 h-3 text-amber-600" /> Protected (Peer GM)
+                          </span>
+                        ) : (
+                          <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                            {/* Role Select Dropdown */}
+                            <select
+                              disabled={isUpdating || isDeleting}
+                              value={u.role}
+                              onChange={(e) =>
+                                handleRoleChange(u.id, e.target.value as "GUEST" | "STAFF" | "GM")
+                              }
+                              className="text-xs bg-white border border-stone-300 rounded px-2 py-1 font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#546a4a] disabled:opacity-50"
+                            >
+                              <option value="GUEST">GUEST</option>
+                              <option value="STAFF">STAFF</option>
+                              <option value="GM">GM</option>
+                            </select>
+
+                            {/* Quick 1-Click Promote / Demote */}
+                            {u.role === "GUEST" ? (
+                              <button
+                                type="button"
+                                disabled={isUpdating || isDeleting}
+                                onClick={() => handleRoleChange(u.id, "STAFF")}
+                                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[11px] font-semibold transition disabled:opacity-50"
+                              >
+                                Promote to Staff
+                              </button>
+                            ) : u.role === "STAFF" ? (
+                              <button
+                                type="button"
+                                disabled={isUpdating || isDeleting}
+                                onClick={() => handleRoleChange(u.id, "GM")}
+                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded text-[11px] font-semibold transition disabled:opacity-50"
+                              >
+                                Promote to GM
+                              </button>
+                            ) : null}
+
+                            {/* In-App Delete Button (Triggers modern custom modal) */}
+                            <button
+                              type="button"
+                              title="Delete User Account"
+                              disabled={isUpdating || isDeleting}
+                              onClick={() => setUserToDelete({ id: u.id, name: u.name })}
+                              className="p-1 text-stone-400 hover:text-red-600 rounded transition disabled:opacity-50"
+                            >
+                              {isDeleting ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Modern In-App Confirmation Modal (Teleported to document.body) */}
