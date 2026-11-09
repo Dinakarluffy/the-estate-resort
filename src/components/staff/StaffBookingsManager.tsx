@@ -247,53 +247,53 @@ export function StaffBookingsManager() {
         </p>
       </div>
 
-      {/* KPI Cards Row (5 Distinct Status Pillars) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 print:hidden">
-        <div className="bg-white border border-[#ebded2] p-4 rounded-2xl shadow-sm">
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+      {/* KPI Cards Row (5 Distinct Status Pillars - Horizontal swipe on mobile, grid on desktop) */}
+      <div className="flex overflow-x-auto gap-2.5 pb-1 sm:pb-0 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3 scrollbar-none print:hidden">
+        <div className="bg-white border border-[#ebded2] p-3.5 sm:p-4 rounded-2xl shadow-sm min-w-[130px] sm:min-w-0 flex-1 shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
             Total Bookings
           </span>
-          <div className="text-2xl font-serif font-bold text-stone-900 mt-1">
+          <div className="text-xl sm:text-2xl font-serif font-bold text-stone-900 mt-1">
             {totalCount}
           </div>
-          <span className="text-[10px] text-stone-400 mt-0.5 block">Online Direct Sales</span>
+          <span className="text-[10px] text-stone-400 mt-0.5 block">Online Direct</span>
         </div>
 
-        <div className="bg-white border border-[#ebded2] p-4 rounded-2xl shadow-sm">
-          <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
-            Confirmed Active
+        <div className="bg-white border border-[#ebded2] p-3.5 sm:p-4 rounded-2xl shadow-sm min-w-[130px] sm:min-w-0 flex-1 shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+            Confirmed
           </span>
-          <div className="text-2xl font-serif font-bold text-emerald-800 mt-1">
+          <div className="text-xl sm:text-2xl font-serif font-bold text-emerald-800 mt-1">
             {confirmedCount}
           </div>
           <span className="text-[10px] text-emerald-600 mt-0.5 block">Guaranteed Keys</span>
         </div>
 
-        <div className="bg-white border border-[#ebded2] p-4 rounded-2xl shadow-sm">
-          <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider block">
-            In-House (Staying)
+        <div className="bg-white border border-[#ebded2] p-3.5 sm:p-4 rounded-2xl shadow-sm min-w-[130px] sm:min-w-0 flex-1 shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-bold text-blue-700 uppercase tracking-wider block">
+            In-House
           </span>
-          <div className="text-2xl font-serif font-bold text-blue-800 mt-1">
+          <div className="text-xl sm:text-2xl font-serif font-bold text-blue-800 mt-1">
             {checkedInCount}
           </div>
           <span className="text-[10px] text-blue-600 mt-0.5 block">Keys Occupied</span>
         </div>
 
-        <div className="bg-white border border-[#ebded2] p-4 rounded-2xl shadow-sm">
-          <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">
+        <div className="bg-white border border-[#ebded2] p-3.5 sm:p-4 rounded-2xl shadow-sm min-w-[130px] sm:min-w-0 flex-1 shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-bold text-purple-700 uppercase tracking-wider block">
             Departed
           </span>
-          <div className="text-2xl font-serif font-bold text-purple-800 mt-1">
+          <div className="text-xl sm:text-2xl font-serif font-bold text-purple-800 mt-1">
             {checkedOutCount}
           </div>
           <span className="text-[10px] text-purple-600 mt-0.5 block">Checked Out</span>
         </div>
 
-        <div className="bg-white border border-[#ebded2] p-4 rounded-2xl shadow-sm col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider block">
+        <div className="bg-white border border-[#ebded2] p-3.5 sm:p-4 rounded-2xl shadow-sm min-w-[130px] sm:min-w-0 flex-1 shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-bold text-red-600 uppercase tracking-wider block">
             Cancelled
           </span>
-          <div className="text-2xl font-serif font-bold text-red-700 mt-1">
+          <div className="text-xl sm:text-2xl font-serif font-bold text-red-700 mt-1">
             {cancelledCount}
           </div>
           <span className="text-[10px] text-red-500 mt-0.5 block">Inventory Released</span>
@@ -409,8 +409,139 @@ export function StaffBookingsManager() {
         </div>
       </div>
 
-      {/* Bookings Roster Table */}
-      <div className="bg-white border border-[#ebded2] rounded-2xl shadow-sm overflow-hidden">
+      {/* Mobile-First Card View (Zero horizontal scroll on phones & tablets) */}
+      <div className="lg:hidden space-y-3.5 print:hidden">
+        {filteredBookings.length === 0 ? (
+          <div className="bg-white border border-[#ebded2] rounded-2xl p-8 text-center text-stone-400 text-xs">
+            No reservations match the selected criteria.
+          </div>
+        ) : (
+          filteredBookings.map((b) => (
+            <div
+              key={b.id}
+              className="bg-white border border-[#ebded2] rounded-2xl p-4 shadow-sm space-y-3"
+            >
+              {/* Header: Ref Number + Status Badge */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    href={`/confirmation/${b.bookingNumber}`}
+                    target="_blank"
+                    className="font-mono font-bold text-sm text-stone-900 hover:text-emerald-800 flex items-center gap-1"
+                  >
+                    <span>{b.bookingNumber}</span>
+                    <ExternalLink className="w-3 h-3 text-stone-400" />
+                  </Link>
+                </div>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    b.status === "CONFIRMED"
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                      : b.status === "CHECKED_IN"
+                      ? "bg-blue-100 text-blue-800 border border-blue-300"
+                      : b.status === "CHECKED_OUT"
+                      ? "bg-purple-100 text-purple-800 border border-purple-300"
+                      : "bg-red-100 text-red-800 border border-red-300"
+                  }`}
+                >
+                  {b.status.replace("_", " ")}
+                </span>
+              </div>
+
+              {/* Guest & Stay Summary Block */}
+              <div className="bg-[#faf7f2] border border-[#ebded2] rounded-xl p-3 space-y-2 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] text-stone-400 uppercase font-bold block">Primary Guest</span>
+                    <strong className="text-stone-900 text-sm block">{b.guestName}</strong>
+                    <span className="text-stone-600 font-mono text-xs block">{b.guestPhone}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-stone-400 uppercase font-bold block">Stay Schedule</span>
+                    <span className="font-mono text-xs font-semibold text-stone-800 block">
+                      {b.checkIn} → {b.checkOut}
+                    </span>
+                    <span className="text-[10px] text-stone-500 block">
+                      {b.totalNights} {b.totalNights === 1 ? "Night" : "Nights"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[#ebded2]/70 flex items-center justify-between">
+                  <span className="text-stone-800 font-semibold">{b.roomType.name}</span>
+                  {b.promoCode && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      {b.promoCode} applied
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Financial & Tariff Line */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <div>
+                  <span className="text-base font-mono font-bold text-stone-900 block">
+                    {formatCurrency(b.grandTotal)}
+                  </span>
+                  <span className="text-[10px] text-stone-500 font-mono block">
+                    Incl. {b.gstRatePercent}% GST ({formatCurrency(b.gstAmount)})
+                  </span>
+                </div>
+                <div>
+                  {b.paymentStatus === "PAID" ? (
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      ✓ Paid Online (Razorpay)
+                    </span>
+                  ) : b.paymentStatus === "REFUNDED" ? (
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                      Refunded
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-stone-600 bg-stone-100 px-2 py-0.5 rounded">
+                      {b.paymentStatus}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Front Desk Operational Actions */}
+              <div className="flex items-center gap-2 pt-2 border-t border-stone-100">
+                {b.status === "CONFIRMED" && (
+                  <button
+                    onClick={() => initiateCheckIn(b)}
+                    className="flex-1 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Check In Guest</span>
+                  </button>
+                )}
+
+                {b.status === "CHECKED_IN" && (
+                  <button
+                    onClick={() => initiateCheckOut(b)}
+                    className="flex-1 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Check Out Guest</span>
+                  </button>
+                )}
+
+                <Link
+                  href={`/confirmation/${b.bookingNumber}`}
+                  target="_blank"
+                  className="px-3 py-2 border border-stone-200 text-stone-600 hover:bg-stone-100 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <FileText className="w-3.5 h-3.5 text-stone-400" />
+                  <span>Invoice</span>
+                </Link>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Bookings Roster Table (Hidden on mobile/tablet) */}
+      <div className="hidden lg:block bg-white border border-[#ebded2] rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse min-w-[800px]">
             <thead className="bg-[#faf7f2] border-b border-[#ebded2] text-stone-700 font-bold uppercase tracking-wider text-[11px]">

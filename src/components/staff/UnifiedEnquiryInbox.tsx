@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Mail,
   Send,
@@ -72,6 +72,10 @@ export function UnifiedEnquiryInbox() {
   const [inputPhone, setInputPhone] = useState("");
   const [phoneModalIntent, setPhoneModalIntent] = useState<"whatsapp" | "call" | "save">("whatsapp");
 
+  // DOM Refs for Smooth Scrolling between Query List and Query Details
+  const listRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLDivElement>(null);
+
   const fetchEnquiries = async () => {
     setLoading(true);
     try {
@@ -114,12 +118,20 @@ export function UnifiedEnquiryInbox() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const handleSelectEnquiry = (enquiry: EnquiryItem) => {
+  const handleSelectEnquiry = (enquiry: EnquiryItem, shouldScroll: boolean = false) => {
     setSelectedEnquiry(enquiry);
     setDraftText(enquiry.draftReply || "");
     setNoteText(enquiry.internalNotes || "");
     setIsEditingDraft(false);
     setIsRevisingSentQuote(false);
+
+    if (shouldScroll) {
+      setTimeout(() => {
+        if (detailsRef.current) {
+          detailsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    }
   };
 
   // Human-in-the-Loop: Approve & Send
@@ -883,7 +895,7 @@ export function UnifiedEnquiryInbox() {
       {/* Main 2-Column Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Enquiries List (5 Cols) */}
-        <div className="lg:col-span-5 space-y-3 max-h-[820px] overflow-y-auto pr-1">
+        <div ref={listRef} className="lg:col-span-5 space-y-3 max-h-[820px] overflow-y-auto pr-1 scroll-mt-6">
           {filteredList.length === 0 ? (
             <div className="bg-white border border-[#ebded2] rounded-2xl p-8 text-center text-stone-400 text-xs">
               No enquiries match the selected filter.
@@ -897,7 +909,7 @@ export function UnifiedEnquiryInbox() {
               return (
                 <div
                   key={item.id}
-                  onClick={() => handleSelectEnquiry(item)}
+                  onClick={() => handleSelectEnquiry(item, true)}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer text-xs space-y-2.5 relative ${
                     isSelected
                       ? "bg-white border-[#384432] shadow-md ring-2 ring-[#384432]/20"
@@ -978,14 +990,20 @@ export function UnifiedEnquiryInbox() {
                     "{item.rawMessage}"
                   </p>
 
-                  {/* Guest Contact & Timestamp */}
+                  {/* Guest Contact, Date & View Details Link */}
                   <div className="flex items-center justify-between text-[11px] text-stone-400 pt-1.5 border-t border-stone-100">
-                    <span className="font-semibold text-stone-600 truncate max-w-[180px]">
+                    <span className="font-semibold text-stone-600 truncate max-w-[160px]">
                       {item.guestName || "Prospective Guest"}
                     </span>
-                    <span className="font-mono text-[10px]">
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px]">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition">
+                        <span>Details</span>
+                        <ArrowRight className="w-2.5 h-2.5" />
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -994,9 +1012,21 @@ export function UnifiedEnquiryInbox() {
         </div>
 
         {/* Right Column: AI Human-in-the-Loop Review Card (7 Cols) */}
-        <div className="lg:col-span-7">
+        <div ref={detailsRef} id="enquiry-details-view" className="lg:col-span-7 scroll-mt-6">
           {selectedEnquiry ? (
             <div className="bg-white border border-[#ebded2] rounded-2xl shadow-sm p-6 space-y-6">
+              {/* Mobile / Stacked View Back to Queries Navigation */}
+              <div className="lg:hidden flex items-center justify-between bg-stone-50 border border-stone-200/80 rounded-xl px-3 py-2 text-xs">
+                <span className="text-stone-600 font-medium">Viewing details for <strong className="text-stone-900">{selectedEnquiry.enquiryNumber}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  className="font-bold text-emerald-800 hover:text-emerald-900 inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-xs transition"
+                >
+                  <span>↑ Back to Query List</span>
+                </button>
+              </div>
+
               {/* Header Info & Actions */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-stone-100 pb-4">
                 <div>
