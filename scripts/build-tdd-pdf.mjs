@@ -8,8 +8,29 @@ const tddPdfPath = path.resolve("TDD.pdf");
 
 const mdContent = fs.readFileSync(tddMdPath, "utf-8");
 
-// Simple, robust markdown to HTML converter for standard GitHub flavored markdown
-function mdToHtml(md) {
+async function fetchMermaidSvg(mermaidCode, index) {
+  const cachedPath = path.resolve("scratch", `diagram-${index}.svg`);
+  if (fs.existsSync(cachedPath)) {
+    return fs.readFileSync(cachedPath, "utf-8");
+  }
+
+  try {
+    const base64 = Buffer.from(mermaidCode).toString("base64");
+    const url = `https://mermaid.ink/svg/${base64}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const svg = await res.text();
+      fs.writeFileSync(cachedPath, svg, "utf-8");
+      return svg;
+    }
+  } catch (err) {
+    console.error(`Failed to fetch mermaid SVG for diagram ${index}:`, err.message);
+  }
+  return null;
+}
+
+// Convert markdown to rich HTML with SVG Mermaid Diagrams and styled tables
+async function mdToHtml(md) {
   let lines = md.split("\n");
   let inCode = false;
   let codeLang = "";
@@ -17,6 +38,7 @@ function mdToHtml(md) {
   let inTable = false;
   let tableBuffer = [];
   let html = [];
+  let mermaidIndex = 1;
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
@@ -24,7 +46,21 @@ function mdToHtml(md) {
     // Code blocks
     if (line.trim().startsWith("```")) {
       if (inCode) {
-        html.push(`<pre><code class="language-${codeLang}">${escapeHtml(codeBuffer.join("\n"))}</code></pre>`);
+        if (codeLang.toLowerCase() === "mermaid") {
+          const rawCode = codeBuffer.join("\n").trim();
+          const svg = await fetchMermaidSvg(rawCode, mermaidIndex);
+          if (svg) {
+            html.push(`<div class="mermaid-diagram-card">
+              <div class="diagram-header">Architecture Diagram ${mermaidIndex}</div>
+              <div class="diagram-svg-wrap">${svg}</div>
+            </div>`);
+          } else {
+            html.push(`<pre><code class="language-mermaid">${escapeHtml(rawCode)}</code></pre>`);
+          }
+          mermaidIndex++;
+        } else {
+          html.push(`<pre><code class="language-${codeLang}">${escapeHtml(codeBuffer.join("\n"))}</code></pre>`);
+        }
         inCode = false;
         codeBuffer = [];
       } else {
@@ -106,6 +142,8 @@ function renderTable(lines) {
 
 function parseInline(text) {
   let s = text;
+  // math formatting
+  s = s.replace(/\$([^\$]+)\$/g, "<em>$1</em>");
   // bold & italic
   s = s.replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>");
   s = s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
@@ -117,9 +155,11 @@ function parseInline(text) {
   return s;
 }
 
-const bodyHtml = mdToHtml(mdContent);
+async function build() {
+  console.log("⏳ Converting TDD.md to rich HTML with SVG Mermaid vector diagrams...");
+  const bodyHtml = await mdToHtml(mdContent);
 
-const fullHtml = `<!DOCTYPE html>
+  const fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -127,7 +167,7 @@ const fullHtml = `<!DOCTYPE html>
   <style>
     @page {
       size: A4;
-      margin: 20mm;
+      margin: 18mm;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -229,6 +269,41 @@ const fullHtml = `<!DOCTYPE html>
       color: #2b6cb0;
       text-decoration: none;
     }
+
+    /* Mermaid Vector Diagram Cards */
+    .mermaid-diagram-card {
+      margin: 24px 0;
+      padding: 16px;
+      background: #fdfdfd;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      page-break-inside: avoid;
+      text-align: center;
+    }
+    .diagram-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #718096;
+      margin-bottom: 12px;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 6px;
+    }
+    .diagram-svg-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    .diagram-svg-wrap svg {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
     @media print {
       body {
         padding: 0;
@@ -237,6 +312,10 @@ const fullHtml = `<!DOCTYPE html>
       h1 { font-size: 20px; }
       h2 { font-size: 16px; }
       h3 { font-size: 13.5px; }
+      .mermaid-diagram-card {
+        border: 1px solid #cbd5e0;
+        page-break-inside: avoid;
+      }
       table.tdd-table th {
         background: #242e20 !important;
         -webkit-print-color-adjust: exact;
@@ -256,20 +335,23 @@ const fullHtml = `<!DOCTYPE html>
 </body>
 </html>`;
 
-fs.writeFileSync(tddHtmlPath, fullHtml, "utf-8");
-console.log(`✅ Generated TDD.html (${(fs.statSync(tddHtmlPath).size / 1024).toFixed(1)} KB)`);
+  fs.writeFileSync(tddHtmlPath, fullHtml, "utf-8");
+  console.log(`✅ Generated TDD.html (${(fs.statSync(tddHtmlPath).size / 1024).toFixed(1)} KB) with embedded SVG diagrams`);
 
-// Try generating PDF with headless chrome
-try {
-  const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-  if (fs.existsSync(chromePath)) {
-    execSync(`"${chromePath}" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="${tddPdfPath}" "${tddHtmlPath}"`, {
-      stdio: "ignore",
-    });
-    if (fs.existsSync(tddPdfPath)) {
-      console.log(`✅ Generated TDD.pdf (${(fs.statSync(tddPdfPath).size / 1024).toFixed(1)} KB)`);
+  // Generate PDF with headless chrome
+  try {
+    const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    if (fs.existsSync(chromePath)) {
+      execSync(`"${chromePath}" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="${tddPdfPath}" "${tddHtmlPath}"`, {
+        stdio: "ignore",
+      });
+      if (fs.existsSync(tddPdfPath)) {
+        console.log(`✅ Successfully compiled TDD.pdf (${(fs.statSync(tddPdfPath).size / 1024).toFixed(1)} KB) with REAL VISUAL DIAGRAMS!`);
+      }
     }
+  } catch (err) {
+    console.error("PDF generation failed:", err.message);
   }
-} catch (err) {
-  console.log("ℹ️ Note: Automated PDF generation skipped; TDD.html is ready to print to PDF in any browser.");
 }
+
+build().catch(console.error);
