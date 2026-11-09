@@ -1,9 +1,8 @@
 import { PrismaClient, Booking } from "@prisma/client";
+import { prisma } from "./prisma";
 import { checkRoomAvailability, atomicReserveAllotment, atomicReleaseAllotment, getDateRangeArray } from "./allotment";
 import { calculateTariffGST } from "./gst";
 import { validateAndApplyPromo, incrementPromoUsage } from "./promo";
-
-const prisma = new PrismaClient();
 
 export interface CreateBookingInput {
   userId?: string;

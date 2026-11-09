@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { prisma } from "./prisma";
 import { classifyAndExtractEnquiry, AIEnquiryClassification } from "./gemini";
-
-const prisma = new PrismaClient();
 
 export interface CreateEnquiryInput {
   source: "WEB" | "EMAIL" | "WHATSAPP";

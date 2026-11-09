@@ -6,7 +6,7 @@
 **Scale:** 76 Keys total (64 Luxury Heritage Rooms + 12 Private Plunge Pool Villas)  
 **Direct Allotment:** 17 Keys online (protecting 59 keys for travel agency partners & offline corporate buyouts)  
 **GitHub Repository:** `https://github.com/Dinakarluffy/the-estate-resort`  
-**Live Local App:** `http://localhost:3000`  
+**Live Application (Vercel):** `https://the-estate-resort.vercel.app` *(Local Review: `http://localhost:3000`)*  
 
 ---
 

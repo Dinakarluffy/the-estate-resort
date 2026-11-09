@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { prisma } from "./prisma";
 import {
   createSessionToken,
   verifySessionToken,
@@ -20,8 +21,6 @@ export {
   type Role,
   type UserSession,
 };
-
-const prisma = new PrismaClient();
 
 export interface AuthResult {
   success: boolean;

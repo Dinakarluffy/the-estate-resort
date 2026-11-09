@@ -23,6 +23,7 @@ prisma/dev.db
 prisma/dev.db-journal
 *.db
 *.db-journal
+!prisma/seed.db
 
 # Logs
 npm-debug.log*

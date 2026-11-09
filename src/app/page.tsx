@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { verifySessionToken } from "@/lib/auth";
 import { testGeminiConnection } from "@/lib/gemini";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { Navbar } from "@/components/Navbar";
 import { EvaluatorToolbar } from "@/components/reviewer/EvaluatorToolbar";
 import { HomeBookingBar } from "@/components/home/HomeBookingBar";
@@ -21,7 +21,6 @@ import {
   Clock,
 } from "lucide-react";
 
-const prisma = new PrismaClient();
 
 export default async function HomePage() {
   const cookieStore = cookies();

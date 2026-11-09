@@ -11,7 +11,7 @@
 > **Assessment Submission:** IsoCode Labs Take-Home Assessment — Problem #5: Hill Resort Direct-Booking Website with AI Enquiry Routing  
 > **Client:** Company A — Luxury 76-Key Coffee-Estate Resort, Mullayanagiri Hills, Chikkamagaluru, Karnataka  
 > **Repository:** `https://github.com/Dinakarluffy/the-estate-resort`  
-> **Live Local App:** `http://localhost:3000`  
+> **Live Application (Vercel):** `https://the-estate-resort.vercel.app` *(Local Review: `http://localhost:3000`)*  
 > **Submission Package:** `TDD.pdf` (or `TDD.md`) and `deployment.md`  
 
 ---

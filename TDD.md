@@ -2,7 +2,7 @@
 ## The Estate Resort — Direct-Booking Platform & AI Operations Router
 
 **GitHub Repository:** `https://github.com/Dinakarluffy/the-estate-resort`  
-**Live Local Application:** `http://localhost:3000`  
+**Live Application (Vercel):** `https://the-estate-resort.vercel.app` *(Local Review: `http://localhost:3000`)*  
 **Assessment:** IsoCode Labs Take-Home Assessment — Problem #5: Hill Resort Direct-Booking Website with AI Enquiry Routing  
 **Client:** Company A — Luxury 76-Key Coffee-Estate Resort, Mullayanagiri Hills, Chikkamagaluru, Karnataka  
 **Scale:** 76 Keys total (64 Luxury Heritage Rooms + 12 Private Plunge Pool Villas)  

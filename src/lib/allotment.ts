@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { prisma } from "./prisma";
 import { calculateTariffGST, GSTBreakdown } from "./gst";
-
-const prisma = new PrismaClient();
 
 export class OverbookingError extends Error {
   constructor(message: string) {
