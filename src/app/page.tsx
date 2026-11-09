@@ -82,12 +82,15 @@ export default async function HomePage() {
               >
                 Weddings & Lawns (350 Pax)
               </Link>
-              <Link
-                href="/staff/dashboard"
-                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-stone-200 border border-white/20 font-semibold text-sm rounded-xl transition"
-              >
-                Staff AI Enquiry Inbox
-              </Link>
+              {(user?.role === "STAFF" || user?.role === "GM") && (
+                <Link
+                  href="/staff/dashboard"
+                  className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-stone-200 border border-white/20 font-semibold text-sm rounded-xl transition flex items-center gap-2"
+                >
+                  <Coffee className="w-4 h-4 text-emerald-400" />
+                  <span>Staff AI Enquiry Inbox</span>
+                </Link>
+              )}
             </div>
           </div>
         </section>
