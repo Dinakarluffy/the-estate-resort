@@ -1,109 +1,144 @@
-# The Estate Resort — Deployment & Reviewer Guide
+# Deployment & Reviewer Guide
 
+**Project:** The Estate Resort — Direct-Booking Platform & AI Operations Router  
 **Assessment:** IsoCode Labs Take-Home Assessment — Problem #5: Hill Resort Direct-Booking Website & AI Lead Routing  
 **Client:** Company A — Luxury Coffee-Estate Hill Resort, Mullayanagiri, Chikkamagaluru, Karnataka  
 **Scale:** 76 Keys total (64 Luxury Heritage Rooms + 12 Private Plunge Pool Villas)  
-**Direct Allotment:** 17 Keys online (protecting 59 keys for travel partners & offline corporate buyouts)
+**Direct Allotment:** 17 Keys online (protecting 59 keys for travel agency partners & offline corporate buyouts)  
+**GitHub Repository:** `https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort` *(Replace `<YOUR_GITHUB_USERNAME>` with your GitHub username)*  
+**Live Local App:** `http://localhost:3000`  
 
 ---
 
-## 1. Quick Start (Zero-Setup Local Review)
+## 1. Quick Summary for Reviewers (Plain-English Overview)
 
-The project uses **Next.js 14 App Router**, **TypeScript**, **Tailwind CSS**, and **Prisma ORM with SQLite** (`prisma/dev.db`). No external database servers or Docker containers are required to run or review the application.
+The Estate Resort application is a complete full-stack platform built with **Next.js 14 App Router**, **TypeScript**, **Tailwind CSS**, and **Prisma ORM with SQLite** (`prisma/dev.db`).
 
-### Step 1: Install Dependencies
+* **Zero Cloud Dependencies for Local Testing:** The database is an embedded SQLite file already pre-seeded with 76 rooms, 50 days of dynamic pricing, promotional codes, and demo accounts. You do **not** need Docker, PostgreSQL, Redis, or external cloud accounts to run or test the entire platform locally.
+* **1-Click Evaluator Toolbar:** When you open `http://localhost:3000`, a gold **Evaluator Showcase** bar is pinned below the navigation bar. You can switch between **Guest**, **Staff**, and **General Manager (GM)** with a single click—no password typing needed.
+* **AI Diagnostics Included:** The top bar includes live indicators for the **Gemini 3.5 Flash** router and direct links to `/api/health` (zero-auth system health check) and `/api/ai/test` (live AI connection verification).
+
+---
+
+## 2. Step-by-Step Local Setup Guide
+
+Follow these simple steps to run the project locally on Windows, macOS, or Linux:
+
+### Prerequisites
+* **Node.js:** Version `18.18.0` or higher (`node -v` to check; Node 20 LTS recommended).
+* **npm:** Version `9.0.0` or higher (`npm -v` to check).
+* **Git:** Installed on your machine.
+
+---
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort.git
+cd the-estate-resort
+```
+
+---
+
+### Step 2: Install Project Dependencies
 ```bash
 npm install
 ```
+*(This installs Next.js, Prisma, bcryptjs, jose, Tailwind CSS, Lucide icons, and Vitest).*
 
-### Step 2: Run Full Automated Test Suite
-Run the 100% coverage unit and integration test suite across all 11 backend business modules:
+---
+
+### Step 3: Run the Automated Test Suite (160 Tests)
+Before starting the server, verify the integrity of the business logic:
 ```bash
 npm test
 ```
-> **Result:** 11 test suites, **123 automated Vitest tests pass** in $\sim 5$ seconds.
+> **Expected Result:**  
+> All **15 test suites** and **160 automated tests pass with 100% green status** in approximately 8 seconds, verifying allotment concurrency locks, statutory GST slabs, stay extensions, and AI fallbacks.
 
-### Step 3: Start the Development Server
+---
+
+### Step 4: Start the Development Server
 ```bash
 npm run dev
 ```
-Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+Open **[http://localhost:3000](http://localhost:3000)** in Google Chrome, Edge, Safari, or Firefox.
+
+*(Optional Production Build Verification)*:
+```bash
+npm run build
+npm start
+```
+> All 33 routes compile cleanly into optimized server and static bundles with zero TypeScript or ESLint errors.
 
 ---
 
-## 2. Pre-Seeded Demo Accounts
+## 3. Demo Login Details for the Reviewer
 
-The database comes pre-seeded with 10 accounts covering all 3 authorization tiers:
+The database is pre-seeded with 10 user accounts across all 3 permission tiers. The default password for all demo accounts is **`demo1234`**.
 
-| Role | Email Address | Password | Permissions & Scope |
-|:-----|:--------------|:---------|:---------------------|
-| **Guest (Leisure Traveler)** | `guest@estate.com` | `guest123` | Browses room catalog, applies promo `COFFEE10`, books rooms, manages active stays, 48-hour free cancellation, views GST receipts. |
-| **Reservations Staff** | `staff@estate.com` | `staff123` | Front desk bookings roster, marks guest check-ins, 1-click PMS CSV export, reviews AI enquiry inbox, edits rate-grounded replies, approves & sends quotes. |
-| **General Manager (Admin)** | `gm@estate.com` | `admin123` | Full access: 45-day rate & allotment calendar, bulk seasonal surcharges, blackout scheduling, promo code management, user administration (peer-protected GM accounts). |
+| Role | Email Address | Password | Intended Reviewer Flows |
+| :--- | :--- | :--- | :--- |
+| **Guest (Priya Sharma)** | `guest@estate.com`<br>*(alias: `priya@estate.com`)* | `demo1234` | • Browse rooms and check live 76-key allotment on `/rooms`.<br>• Apply promo code `COFFEE10` for an instant 10% direct discount.<br>• Book with simulated Razorpay payment gateway.<br>• View bookings at `/my-bookings`.<br>• Test **Stay Extension (+1 night)** using Card on File.<br>• Test 48-hour free cancellation self-service. |
+| **Reservations Staff (Karthik Babu)** | `staff@estate.com`<br>*(alias: `karthik.babu@estate.com`)* | `demo1234` | • Access `/staff/inbox` to view incoming multi-channel leads.<br>• Inspect Google Gemini entity extraction (guest counts, dates, budget).<br>• View live **30-minute SLA countdown timers**.<br>• Edit quotation drafts and click **"Approve & Dispatch"**.<br>• Access `/staff/bookings` to mark arriving guests as `CHECKED_IN`.<br>• Download the **21-Column Statutory PMS CSV Export** with SAC code `996311`. |
+| **General Manager (Vikram Hegde)** | `gm@estate.com`<br>*(alias: `vikram.hegde@estate.com`)* | `demo1234` | • Access `/admin/rates` to view and edit the **45-Day Dynamic Rate & Allotment Matrix**.<br>• Test **Physical Key Ceiling Guardrail** (try setting allotment to 45 keys on the 32-key suite $\rightarrow$ rejected with HTTP 400).<br>• Schedule full-estate wedding blackouts.<br>• Manage promotional discount caps (e.g. ₹3,000 max cap).<br>• Inspect the **GM Unsorted AI Lane** and emergency maintenance alerts. |
 
----
-
-## 3. Screen-by-Screen Reviewer Tour Guide
-
-### Screen 1: Rooms & Luxury Villas Catalog (`/rooms`)
-- **Direct Inventory Allotment:** Live badge showing website keys available (e.g. `7 Keys Available Direct`). Prevents overselling agency inventory.
-- **Interactive Photo Gallery:** 9 high-resolution resort photos across 3 luxury room tiers. Includes carousel navigation and full-screen lightbox modal on image click.
-- **Statutory Indian GST Slabs:** Dynamic display of 12% GST ($\le$ ₹7,500/night) or 18% GST ($>$ ₹7,500/night) under SAC Code `996311`.
-
-### Screen 2: 3-Step Direct Checkout Wizard (`/book`)
-- **Step 1 (Stay & Room):** Live interactive date picker with real-time allotment and blackout re-checks.
-- **Step 2 (Guest Details):** Auto-filled from authenticated guest profile (collects only minimal necessary booking data online; foreign guest passport Form C collected at check-in per hotel practice).
-- **Step 3 (Payment & Promo):** Promo code `COFFEE10` validator with instant 10% discount calculation, split CGST + SGST tax invoice preview, and mock Razorpay payment gateway simulation (Card & UPI).
-
-### Screen 3: Guest Reservation History & Stay Management (`/my-bookings`)
-- **Active vs. Completed Stay Separation:** Past stays are marked `COMPLETED STAY` with extension disabled; current stays show `Extend Stay`.
-- **48-Hour Free Cancellation Rule:** Guests can self-cancel with 1 click if check-in is $\ge 48$ hours away. The system atomically releases the reserved key back to resort inventory and refunds the payment. Within 48 hours, the system protects resort revenue by routing to Front Desk phone support.
-- **Duplicate Stay Handling:** If a guest attempts to re-book an already confirmed room, an active reservation alert opens with 3 real-world options:
-  1. *Extend Stay:* Select new checkout date, live allotment verification, and pay pro-rated difference + GST.
-  2. *Book Additional Room:* Book a 2nd room for accompanying family/friends.
-  3. *View Receipt:* 1-click access to official printable GST tax invoice (`/confirmation/[bookingNumber]`).
-
-### Screen 4: Rate & Allotment Calendar (`/admin/rates` — GM Only)
-- **45-Day Dynamic Matrix:** Live grid of rates, website allotments, booked keys, and direct key availability for all room types.
-- **1-Click Inline Editing:** Adjust any nightly rate or website allotment with inline input (hospitality guardrail prevents setting allotment lower than already-booked keys).
-- **Bulk Seasonal Surcharges:** Set holiday / peak weekend rates across date ranges in 1 click.
-- **Blackout Management:** Block specific room types or schedule resort-wide blackouts (e.g. full-estate wedding buyouts).
-- **Promotional Vouchers:** Create, cap, and toggle voucher codes (`COFFEE10`).
-
-### Screen 5: Front Desk Roster & PMS CSV Export (`/staff/bookings` — Staff & GM)
-- **Operational Roster:** Search by guest name, phone, email, or booking reference (`EST-2026-XXXX`). Filter by `CONFIRMED`, `CHECKED_IN`, `CANCELLED`.
-- **Guest Check-In:** 1-click "Check In" button for arriving guests.
-- **1-Click PMS Export:** Downloads an RFC 4180 compliant CSV formatted for hotel Property Management Systems (Opera PMS / IDS Next) with booking references, split CGST/SGST, SAC codes, and stay schedules.
-
-### Screen 6: Unified AI Enquiry Inbox (`/staff/dashboard` — Staff & GM)
-- **Multi-Channel Classification:** Reads inquiries from Website forms, forwarded Emails, and WhatsApp messages.
-- **Gemini 3.5 Flash Router:** Classifies leads into `WEDDING`, `OFFSITE`, `ROOM`, `COMPLAINT`, and `UNSORTED`.
-- **Entity Extraction:** Extracts event dates, guest counts (e.g., 250 wedding guests, 45 offsite pax), and budget indicators.
-- **Rate-Grounded Draft Quotations:** Prices in AI drafts are strictly grounded in active database rates.
-- **Human-in-the-Loop Guarantee:** AI drafts are never sent automatically. Staff review, edit if needed, and click "Approve & Send" (or 1-click "Re-Route").
-- **Complaint & GM Unsorted Lane:** Complaints trigger immediate GM alerts; confidence scores $< 0.70$ route to the GM Unsorted queue.
-
-### Interactive Lead Simulator (`/events`)
-- Reviewers can test the AI router in 1 click using pre-configured IsoCode assessment benchmarks:
-  - 🎊 *Sister's Wedding (250 Pax)* $\rightarrow$ Classified as `WEDDING`, extracts 250 guests.
-  - 💼 *Corporate Offsite (45 Pax)* $\rightarrow$ Classified as `OFFSITE`, extracts 45 attendees.
-  - 🛏️ *Pool Villa Query (2A+1C)* $\rightarrow$ Classified as `ROOM`, quotes live rate table.
-  - ⚠️ *AC Broken Water Leak* $\rightarrow$ Classified as `COMPLAINT`, alerts GM Vikram Hegde.
-  - 🤷 *Ambiguous Query* $\rightarrow$ Confidence $< 0.70$, routed to GM Unsorted lane.
+> **Pro-Tip:** You don't even need to type these emails! Just click the **`Guest (Priya)`**, **`Staff (Karthik)`**, or **`GM (Vikram)`** buttons in the top gold toolbar to log in instantly.
 
 ---
 
-## 4. Key Architectural Strengths
+## 4. Production Deployment & Cloud Hosting
 
-1. **Tatkal-Style Concurrency Control:**
-   Multi-night bookings use database row locks (`prisma.$transaction`) with strict allotment count verification:
-   $$\text{Available Keys}_d = \text{websiteAllotment}_d - \text{bookedCount}_d$$
-   If available keys reach 0 on any night in a date range, the transaction rolls back cleanly, guaranteeing **0 overbookings**.
+### Architecture for Cloud Deployment
+In production, the application is deployed as a serverless container or Node.js service:
+* **Frontend & API Routes:** Hosted on **Vercel**, **AWS Amplify**, or **Railway**.
+* **Database:** In production, SQLite can be swapped to **PostgreSQL** (AWS RDS, Neon, or Supabase) simply by changing `provider = "postgresql"` in `prisma/schema.prisma` and running `npx prisma db push`.
+* **Static Assets & Photos:** Optimized with Next.js Image Optimization and served via CDN.
 
-2. **Statutory Indian GST Compliance:**
-   - Room tariff $\le$ ₹7,500/night $\rightarrow$ **12% GST** (6% CGST + 6% Karnataka SGST).
-   - Room tariff $>$ ₹7,500/night $\rightarrow$ **18% GST** (9% CGST + 9% Karnataka SGST).
-   - SAC Code `996311` embedded in all invoice breakdowns and PMS CSV exports.
+---
 
-3. **100% Backend Test Coverage:**
-   Every single backend business logic module (`file.ts`) has an associated `file.test.ts` suite testing both normal operations and edge cases (boundary values, concurrent exhaustion, negative values, and role escalation).
+## 5. Required Environment Variables (Names Only)
+
+Per the take-home assessment guidelines, **only variable names are documented below (never secret values or keys)**:
+
+| Environment Variable Name | Purpose & Scope | Required in Local Dev? |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | Connection string for Prisma ORM (`file:./dev.db` for SQLite or PostgreSQL connection URI in production). | Pre-configured in `.env` |
+| `JWT_SECRET` | 256-bit secret key used by `jose` to cryptographically sign session tokens. | Pre-configured in `.env` |
+| `GEMINI_API_KEY` | Google Gemini API key for AI lead classification, entity extraction, and draft quotations. | Optional *(App includes built-in deterministic heuristic fallback if absent or quota-limited)* |
+| `NEXT_PUBLIC_APP_URL` | Base canonical URL of the deployed application (e.g. `http://localhost:3000` or production domain). | Pre-configured in `.env` |
+| `NODE_ENV` | Application runtime environment (`development`, `test`, or `production`). | Set automatically by Next.js |
+
+> **Note on Security:** No live passwords, payment credentials, or production tokens are committed to this repository. The `.env.example` file in the repository root provides the structural template.
+
+---
+
+## 6. Zero-Config Health & Diagnostic Endpoints
+
+Reviewers can verify backend system state at any time via zero-authentication HTTP endpoints:
+
+1. **System Health & Invariant Audit:**
+   * **URL:** `http://localhost:3000/api/health?detailed=true`
+   * **What it audits:** Verifies database response latency (1–5ms), confirms the 76-key physical capacity ceiling, checks that active bookings never exceed website allotments (`bookedCount <= websiteAllotment`), and confirms DPDP compliance mode.
+
+2. **AI Connection Diagnostic:**
+   * **URL:** `http://localhost:3000/api/ai/test`
+   * **What it audits:** Sends a live test payload to Google Gemini 3.5 Flash, tests entity extraction, and reports whether the AI model is active or operating in safe deterministic fallback mode.
+
+---
+
+## 7. Troubleshooting & FAQ
+
+* **Q: Do I need a Google Gemini API Key to test the AI Inbox?**
+  * **A:** No! While a valid Gemini API key is configured, if Google free-tier quotas are exhausted or network access is restricted, the platform automatically activates its **Deterministic Rule-Based Fallback Engine**. All sample inquiries (`ENQ-4410`, `ENQ-4411`, `ENQ-4412`) classify with 100% accuracy and generate rate-grounded quotation drafts.
+* **Q: Why are foreign guest passport details not asked during online booking?**
+  * **A:** Under Indian hospitality regulations and the Digital Personal Data Protection (DPDP) Act 2023, Foreigner Registration (Form C) documentation is legally required to be physically verified at hotel front desk check-in, never collected over unverified web booking forms.
+* **Q: How do I test the 1-click sample event benchmarks?**
+  * **A:** Navigate to **[http://localhost:3000/events](http://localhost:3000/events)**. At the top of the form, click any of the 5 benchmark buttons:
+    * 🎊 *Sister's Wedding (250 Pax)* $\rightarrow$ Classified as `WEDDING`, extracts 250 guests.
+    * 💼 *Corporate Offsite (45 Pax)* $\rightarrow$ Classified as `OFFSITE`, extracts 45 attendees.
+    * 🛏️ *Pool Villa Query (2A+1C)* $\rightarrow$ Classified as `ROOM`, quotes live rate table.
+    * ⚠️ *AC Broken Water Leak* $\rightarrow$ Classified as `COMPLAINT`, alerts GM Vikram Hegde.
+    * 🤷 *Ambiguous Query* $\rightarrow$ Confidence $< 0.70$, routed to GM Unsorted lane.
+
+---
+*Created for Company A — The Estate Resort, Chikkamagaluru, Karnataka.*

@@ -65,28 +65,31 @@ export function EvaluatorToolbar({ aiHealth, currentUser }: EvaluatorToolbarProp
             </span>
           </div>
 
-          <a
-            href="/api/health?detailed=true"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden sm:flex items-center gap-1 text-xs text-stone-600 hover:text-emerald-700 font-mono transition"
-            title="Inspect zero-config JSON health diagnostics (76 keys audit, database latency, allotment check)"
-          >
-            <Activity className="w-3.5 h-3.5 text-emerald-600" />
-            <span>/api/health</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-          </a>
-
-          <a
-            href="/api/ai/test"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden sm:flex items-center gap-1 text-xs text-stone-600 hover:text-amber-700 font-mono transition"
-            title="Test Google Gemini live connection & entity extraction"
-          >
-            <span>/api/ai/test</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-          </a>
+          {/* Diagnostics Links */}
+          <div className="hidden sm:flex items-center gap-2 bg-stone-50 px-2.5 py-1 rounded-md border border-stone-200 text-xs font-mono">
+            <a
+              href="/api/health?detailed=true"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-stone-700 hover:text-emerald-700 transition"
+              title="Inspect zero-config JSON health diagnostics (76 keys audit, database latency, allotment check)"
+            >
+              <Activity className="w-3 h-3 text-emerald-600" />
+              <span>/api/health</span>
+              <ExternalLink className="w-2.5 h-2.5 opacity-50" />
+            </a>
+            <span className="text-stone-300">|</span>
+            <a
+              href="/api/ai/test"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-stone-700 hover:text-amber-700 transition"
+              title="Test Google Gemini live connection & entity extraction"
+            >
+              <span>/api/ai/test</span>
+              <ExternalLink className="w-2.5 h-2.5 opacity-50" />
+            </a>
+          </div>
         </div>
 
         {/* Right: 1-Click Demo Accounts */}

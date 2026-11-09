@@ -98,9 +98,9 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
 
     it("applies promo code COFFEE10 and decrements net taxable amount", async () => {
       const d1 = new Date();
-      d1.setDate(d1.getDate() + 15);
+      d1.setDate(d1.getDate() + 28);
       const d2 = new Date();
-      d2.setDate(d2.getDate() + 17);
+      d2.setDate(d2.getDate() + 30);
       const cin = d1.toISOString().split("T")[0];
       const cout = d2.toISOString().split("T")[0];
 
@@ -129,9 +129,9 @@ describe("booking.ts - Guest Booking & Statutory Reservation Engine", () => {
 
     it("applies statutory 18% GST for Coffee Estate Luxury Suite (> ₹7,500/night)", async () => {
       const d1 = new Date();
-      d1.setDate(d1.getDate() + 18);
+      d1.setDate(d1.getDate() + 32);
       const d2 = new Date();
-      d2.setDate(d2.getDate() + 19);
+      d2.setDate(d2.getDate() + 33);
       const cin = d1.toISOString().split("T")[0];
       const cout = d2.toISOString().split("T")[0];
 

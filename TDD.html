@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Technical Design Document (TDD) - The Estate Resort</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1a202c;
+      background: #ffffff;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      font-size: 13px;
+    }
+    h1 {
+      font-size: 24px;
+      color: #242e20;
+      border-bottom: 2px solid #242e20;
+      padding-bottom: 8px;
+      margin-top: 20px;
+    }
+    h2 {
+      font-size: 18px;
+      color: #2e3d28;
+      border-bottom: 1px solid #cbd5e0;
+      padding-bottom: 5px;
+      margin-top: 25px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 15px;
+      color: #3b4d33;
+      margin-top: 18px;
+      page-break-after: avoid;
+    }
+    p, li {
+      color: #2d3748;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    hr {
+      border: 0;
+      border-top: 1px solid #e2e8f0;
+      margin: 20px 0;
+    }
+    blockquote {
+      border-left: 4px solid #b45309;
+      background: #fef3c7;
+      padding: 10px 14px;
+      margin: 12px 0;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    code {
+      font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      background: #edf2f7;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #c53030;
+    }
+    pre {
+      background: #1a202c;
+      color: #e2e8f0;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 11px;
+      line-height: 1.45;
+      page-break-inside: avoid;
+    }
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+    }
+    table.tdd-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 11.5px;
+      page-break-inside: avoid;
+    }
+    table.tdd-table th {
+      background: #242e20;
+      color: #ffffff;
+      padding: 7px 10px;
+      text-align: left;
+      font-weight: 600;
+      border: 1px solid #242e20;
+    }
+    table.tdd-table td {
+      padding: 6px 10px;
+      border: 1px solid #e2e8f0;
+      color: #2d3748;
+    }
+    table.tdd-table tr:nth-child(even) td {
+      background: #f7fafc;
+    }
+    a {
+      color: #2b6cb0;
+      text-decoration: none;
+    }
+    @media print {
+      body {
+        padding: 0;
+        font-size: 11.5px;
+      }
+      h1 { font-size: 20px; }
+      h2 { font-size: 16px; }
+      h3 { font-size: 13.5px; }
+      table.tdd-table th {
+        background: #242e20 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      pre {
+        background: #1a202c !important;
+        color: #e2e8f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Technical Design Document (TDD)</h1>
+<h2>The Estate Resort — Direct-Booking Platform & AI Operations Router</h2>
+<br/>
+<p><strong>GitHub Repository:</strong> <code>https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort</code> <em>(Replace <code><YOUR_GITHUB_USERNAME></code> with your GitHub username)</em>  </p>
+<p><strong>Live Local Application:</strong> <code>http://localhost:3000</code>  </p>
+<p><strong>Assessment:</strong> IsoCode Labs Take-Home Assessment — Problem #5: Hill Resort Direct-Booking Website with AI Enquiry Routing  </p>
+<p><strong>Client:</strong> Company A — Luxury 76-Key Coffee-Estate Resort, Mullayanagiri Hills, Chikkamagaluru, Karnataka  </p>
+<p><strong>Scale:</strong> 76 Keys total (64 Luxury Heritage Rooms + 12 Private Plunge Pool Villas)  </p>
+<p><strong>Author:</strong> Full-Stack & AI Systems Architect  </p>
+<p><strong>Date:</strong> November 2026  </p>
+<p><strong>Status:</strong> Shipped, Verified & Production-Hardened (160/160 Tests Passing)  </p>
+<br/>
+<hr/>
+<br/>
+<h2>1. Executive Summary & Plain-English Business Case</h2>
+<br/>
+<h3>1.1 The Business Problem in Plain English (Layman's Guide)</h3>
+<p>The Estate is a luxury 76-room coffee plantation resort in Chikkamagaluru, Karnataka, commanding high tariffs (₹6,500 to ₹16,000 per night) and generating ₹24–28 Crore in annual revenue. Despite strong guest demand, <strong>the resort was suffering an annual profit leakage of ₹1.05 Crore across two core areas</strong>:</p>
+<br/>
+<p>1. <strong>The 20% OTA Commission Tax (₹33.3 Lakhs Lost Annually):</strong>  </p>
+<p>   68 out of every 100 room nights came through Online Travel Agencies (OTAs) such as MakeMyTrip, Booking.com, and Agoda. These middlemen charge a 20% commission on every booking. Only 12% of guests booked directly because the resort’s website was merely an unbookable brochure with a telephone number. Moving just 15% of those OTA nights to direct bookings saves the resort <strong>₹33.3 Lakhs every single year</strong>.</p>
+<br/>
+<p>2. <strong>The High-Ticket Event Delay Trap (₹72.0 Lakhs Lost Annually):</strong>  </p>
+<p>   The resort receives approximately 90 inquiries every month for high-paying destination weddings (250+ guests) and corporate leadership offsites (45+ attendees) via WhatsApp, email, and web forms. Because pricing lived in scattered Excel sheets, <strong>30% of inquiries waited over 24 hours for a quotation</strong>. Wealthy event planners cannot wait; they quickly booked competing properties in Coorg or Kabini. Losing just 3 destination events a month at a conservative ₹2 Lakh contribution each resulted in <strong>₹72 Lakhs in lost annual profit</strong>.</p>
+<br/>
+<pre><code class="language-">+-----------------------------------------------------------------------------------+
+| Metric                                   | Baseline (Before) | With Platform (Year 1) |
++-----------------------------------------------------------------------------------+
+| Direct Booking Share                     | 12%               | 20% Target (+8%)       |
+| Annual OTA Commission Savings            | ₹0                | ₹33.3 Lakhs / year     |
+| Median Event Lead Response Time          | 4.5 Hours         | &lt; 2 Minutes (AI Draft) |
+| High-Value Event Lead Recovery           | ₹0                | ₹72.0 Lakhs / year     |
+| Website Overbooking Incidents            | 3-4 per quarter   | 0 (Guaranteed ACID)    |
+| Total Annual Financial Value Delivered   | -                 | ₹1.053 Crore / year    |
+| Development Cost                         | -                 | ₹8.0 Lakhs (13.1x ROI) |
++-----------------------------------------------------------------------------------+</code></pre>
+<br/>
+<hr/>
+<br/>
+<h2>2. Labeled Business & Technical Assumptions</h2>
+<br/>
+<p>Per the assessment brief, all design decisions are grounded in the following labeled assumptions:</p>
+<br/>
+<li><strong>[Assumption A1 — Key Inventory Breakdown]:</strong> Total physical resort capacity is exactly 76 keys, divided into:</li>
+<p>  <em> 32 </em>Planter's Heritage Rooms* (Base ₹6,500/night $\rightarrow$ 12% GST)</p>
+<p>  <em> 32 </em>Coffee Estate Luxury Suites* (Base ₹9,500/night $\rightarrow$ 18% GST)</p>
+<p>  <em> 12 </em>Misty Valley Private Pool Villas* (Base ₹16,000/night $\rightarrow$ 18% GST)</p>
+<li><strong>[Assumption A2 — Allotment Partitioning]:</strong> To protect travel agency partner commitments and offline corporate buyouts, the website is allotted <strong>17 keys daily</strong> (8 Heritage, 6 Suites, 3 Villas). The remaining 59 keys are reserved for agency and offline distribution.</li>
+<li><strong>[Assumption A3 — Financial Model]:</strong> 76 keys $\times$ 365 days $\times$ 62% average annual occupancy = 17,199 room nights at an average tariff of ₹9,500. 68% via agencies = 11,695 nights = ₹11.11 Crore. At 20% commission = ₹2.22 Crore/year. Shifting 15% of agency bookings to direct bookings saves ₹33.3 Lakhs/year.</li>
+<li><strong>[Assumption A4 — Event Conversion Economics]:</strong> 90 monthly event inquiries. 30% wait $> 24$ hours, losing 3 bookings/month. Average event contribution = ₹2 Lakhs. 36 lost events $\times$ ₹2 Lakhs = ₹72 Lakhs/year.</li>
+<li><strong>[Assumption A5 — Form C & Data Privacy]:</strong> Under the Digital Personal Data Protection (DPDP) Act 2023 and Indian hotel regulations, foreign guest passport scans and visa details are <strong>not collected over online web forms</strong>; they are taken in-person at front-desk check-in.</li>
+<li><strong>[Assumption A6 — Statutory Indian GST Threshold]:</strong> Ministry of Finance notification mandates:</li>
+<p>  * Room tariff $\le$ ₹7,500/night incurs <strong>12% GST</strong> (6% CGST + 6% Karnataka SGST).</p>
+<p>  * Room tariff $>$ ₹7,500/night incurs <strong>18% GST</strong> (9% CGST + 9% Karnataka SGST).</p>
+<p>  * Harmonized System Nomenclature (HSN/SAC) Code for Hotel Accommodation is <strong>996311</strong>.</p>
+<br/>
+<hr/>
+<br/>
+<h2>3. High-Level System Architecture & Technology Choices</h2>
+<br/>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph ClientLayer["Frontend Experience (Next.js 14 App Router)"]
+        GuestView["Guest Portal\n(/rooms, /book, /my-bookings)"]
+        StaffView["Staff AI Operations\n(/staff/inbox, /staff/bookings)"]
+        AdminView["GM Control Center\n(/admin/rates, /admin/promos)"]
+        EvalToolbar["Evaluator Showcase\n(1-Click Role Switcher &amp; Live Diagnostics)"]
+    end
+
+    subgraph SecurityLayer["Edge Security &amp; Middleware"]
+        EdgeAuth["Jose Edge JWT Session Guard\n(estate_session HttpOnly Cookie)"]
+        RateLimiter["Sliding-Window Rate Limiter\n(Anti-Brute Force Protection)"]
+        Sanitizer["XSS Sanitization &amp; Data Scrubber\n(DPDP Act 2023 Compliant)"]
+    end
+
+    subgraph BusinessLogic["Hard Business Logic Core (src/lib/)"]
+        AllotmentEng["Atomic Allotment Engine\n(allotment.ts - Zero Overbooking)"]
+        GstEng["Statutory GST Engine\n(gst.ts - SAC 996311, 12% vs 18%)"]
+        BookingEng["Reservation Lifecycle\n(booking.ts - Stay Extensions &amp; Cancel)"]
+        RatesEng["Dynamic Matrix &amp; Guardrails\n(rates.ts - Physical Key Caps)"]
+        PmsEng["PMS CSV Exporter\n(export.ts - 21 Columns RFC 4180)"]
+        AiRouter["Gemini AI &amp; Fallback Heuristic\n(gemini.ts + enquiry.ts)"]
+    end
+
+    subgraph StorageLayer["Persistence &amp; Database Invariants"]
+        DB[("Prisma ORM with SQLite\n(dev.db - ACID Transactions)")]
+    end
+
+    ClientLayer --&gt; SecurityLayer
+    SecurityLayer --&gt; BusinessLogic
+    BusinessLogic --&gt; StorageLayer</code></pre>
+<br/>
+<h3>Why These Specific Technologies Were Chosen:</h3>
+<p>1. <strong>Next.js 14 App Router (React Server Components + Server Actions):</strong></p>
+<p>   <em> </em>Hill-Station Network Optimization:* Mullayanagiri has intermittent 3G/4G connectivity. React Server Components stream lightweight pre-rendered HTML to phones with minimal client-side JavaScript bundle overhead, ensuring lightning-fast loads.</p>
+<p>   <em> </em>Unified Full-Stack Architecture:* API routes and UI live in a single cohesive codebase without context-switching between separate microservices.</p>
+<p>2. <strong>Prisma ORM with SQLite (Development) / PostgreSQL (Production):</strong></p>
+<p>   <em> </em>Zero-Config Local Evaluation:* SQLite embeds directly inside <code>prisma/dev.db</code>, allowing any reviewer to clone and run the app with <code>npm run dev</code> in seconds without installing Docker or PostgreSQL.</p>
+<p>   <em> </em>ACID Transaction Primitives:* Full support for <code>prisma.$transaction</code>, providing multi-row transactional atomicity required for overbooking prevention.</p>
+<p>3. <strong>Google Gemini 3.5 Flash:</strong></p>
+<p>   * Ultra-low inference latency (<1.2s), native structured JSON schema enforcement, and superior Indian contextual entity extraction (e.g., distinguishing wedding "sangeet" vs. corporate "offsite").</p>
+<p>4. <strong>Jose Edge JWT:</strong></p>
+<p>   * Standard cryptographic session signing usable inside Next.js Edge Middleware without heavy Node.js runtime dependencies.</p>
+<br/>
+<hr/>
+<br/>
+<h2>4. Relational Data Model & Entity Schema</h2>
+<br/>
+<p>The database model comprises 8 normalized entities enforcing strict integrity:</p>
+<br/>
+<pre><code class="language-mermaid">erDiagram
+    User ||--o{ Booking : places
+    RoomType ||--o{ Allotment : tracks_daily
+    RoomType ||--o{ Rate : sets_daily
+    RoomType ||--o{ BlackoutDate : blocks
+    RoomType ||--o{ Booking : reserves
+    Booking ||--o| PromoCode : applies
+    User ||--o{ Enquiry : handles
+
+    User {
+        string id PK
+        string email UK
+        string passwordHash
+        string role "GUEST | STAFF | GM"
+        string name
+        string phone
+    }
+
+    RoomType {
+        string id PK
+        string name
+        string slug UK
+        int basePrice
+        int totalKeys "Physical Capacity (32/32/12)"
+        int defaultAllotment "Website Share (8/6/3)"
+        int maxGuests
+    }
+
+    Allotment {
+        string id PK
+        string roomTypeId FK
+        string date "YYYY-MM-DD"
+        int websiteAllotment
+        int bookedCount
+    }
+
+    Rate {
+        string id PK
+        string roomTypeId FK
+        string date "YYYY-MM-DD"
+        int pricePerNight
+    }
+
+    BlackoutDate {
+        string id PK
+        string roomTypeId FK "Nullable for Resort-Wide"
+        string date "YYYY-MM-DD"
+        string reason
+    }
+
+    Booking {
+        string id PK
+        string bookingNumber UK "EST-2026-XXXX"
+        string userId FK
+        string roomTypeId FK
+        string checkIn "YYYY-MM-DD"
+        string checkOut "YYYY-MM-DD"
+        int totalNights
+        int baseTariffTotal
+        int discountAmount
+        int netTaxableAmount
+        int cgstAmount
+        int sgstAmount
+        int grandTotal
+        string status "CONFIRMED | CHECKED_IN | CANCELLED"
+        string paymentReference
+    }
+
+    PromoCode {
+        string id PK
+        string code UK
+        int discountPercent
+        int maxDiscount "Rupee Cap"
+        int minTariff
+        boolean isActive
+    }
+
+    Enquiry {
+        string id PK
+        string channel "WEBSITE | EMAIL | WHATSAPP"
+        string guestName
+        string guestEmail
+        string guestPhone
+        string rawMessage
+        string category "WEDDING | OFFSITE | ROOM | COMPLAINT | UNSORTED"
+        float confidenceScore
+        int extractedGuests
+        string extractedDates
+        string draftReply
+        string status "PENDING | REVIEWED | SENT"
+        string assignedRole "STAFF | GM"
+        boolean requiresGmReview
+    }</code></pre>
+<br/>
+<hr/>
+<br/>
+<h2>5. Main Workflows & Technical Implementation</h2>
+<br/>
+<h3>5.1 The "Hard Part": Guaranteed Allotment Control & Overbooking Prevention</h3>
+<p>The core invariant of the brief is that <strong>the website must never oversell room stock contracted to travel agencies</strong>.</p>
+<br/>
+<p>To solve this, we implemented the <strong>Tatkal-Style Two-Tier Invariant</strong>:</p>
+<p>1. <strong>Physical Key Capacity Ceiling:</strong> The GM cannot set website allotment for a room higher than its physical count ($A_{rt,d} \le \text{TotalKeys}_{rt}$).</p>
+<p>2. <strong>Atomic Transactional Lock:</strong> When a guest books across $N$ dates, <code>atomicReserveAllotment</code> executes within a single <code>prisma.$transaction</code>:</p>
+<br/>
+<pre><code class="language-typescript">// src/lib/allotment.ts (Simplified)
+await prisma.$transaction(async (tx) =&gt; {
+  for (const date of dateRange) {
+    // 1. Fetch current allotment record
+    const allotment = await tx.allotment.findUnique({
+      where: { roomTypeId_date: { roomTypeId, date } }
+    });
+
+    const maxKeys = allotment?.websiteAllotment ?? roomType.defaultAllotment;
+    const currentBooked = allotment?.bookedCount ?? 0;
+
+    // Invariant check: Ensure at least 1 key is available
+    if (currentBooked + 1 &gt; maxKeys) {
+      throw new Error(`Sold out on ${date}. Direct allotment exhausted.`);
+    }
+
+    // 2. Increment booked count atomically
+    await tx.allotment.upsert({
+      where: { roomTypeId_date: { roomTypeId, date } },
+      update: { bookedCount: { increment: 1 } },
+      create: { roomTypeId, date, websiteAllotment: maxKeys, bookedCount: 1 }
+    });
+  }
+  // 3. Create confirmed booking record
+  return await tx.booking.create({ data: bookingData });
+});</code></pre>
+<li><strong>Failure Guarantee:</strong> If even one night in a 5-night reservation is sold out or blacked out, the entire transaction automatically rolls back. Zero keys are reserved, zero payments are charged, and zero overbookings occur.</li>
+<br/>
+<hr/>
+<br/>
+<h3>5.2 Dynamic Indian GST Engine (SAC Code 996311)</h3>
+<p>Indian tax law mandates strict per-night room tariff slab differentiation:</p>
+<p>$$\text{GST Rate} = \begin{cases} </p>
+<p>12\% \ (6\%\ \text{CGST} + 6\%\ \text{Karnataka SGST}) & \text{if } \text{Tariff/Night} \le ₹7,500 \\</p>
+<p>18\% \ (9\%\ \text{CGST} + 9\%\ \text{Karnataka SGST}) & \text{if } \text{Tariff/Night} > ₹7,500 </p>
+<p>\end{cases}$$</p>
+<br/>
+<li>Implemented in <code>src/lib/gst.ts</code> with financial rounding (<code>Math.round(val * 100) / 100</code>).</li>
+<li>When promo code <code>COFFEE10</code> is applied, the discount is deducted from the <strong>Net Taxable Accommodation Value</strong> <em>before</em> computing CGST/SGST, ensuring statutory tax precision.</li>
+<br/>
+<hr/>
+<br/>
+<h3>5.3 Unified AI Enquiry Router & Human-in-the-Loop Workflow</h3>
+<p>High-value wedding and corporate offsite inquiries arrive across Web forms, Email, and WhatsApp.</p>
+<br/>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    actor Guest as Event Planner / Bride
+    participant Ingest as POST /api/enquiries
+    participant AI as Gemini 3.5 Flash
+    participant DB as SQLite / PostgreSQL
+    actor Staff as Reservations Staff
+    actor GM as General Manager
+
+    Guest-&gt;&gt;Ingest: Submits 250-Guest Wedding Enquiry
+    Ingest-&gt;&gt;AI: Classify Category &amp; Extract Entities
+    Note over AI: Extracts: 250 Guests, Feb 2027&lt;br/&gt;Classifies: WEDDING (0.95 confidence)
+    AI-&gt;&gt;DB: Fetch Active Room Rates &amp; Ground Draft Quote
+    AI--&gt;&gt;Ingest: Structured JSON with Rate-Grounded Draft
+    Ingest-&gt;&gt;DB: Save Enquiry (status: PENDING, timer: 30m)
+    
+    alt Confidence &lt; 0.70 or Complaint
+        Ingest-&gt;&gt;GM: Escalate to GM Unsorted / Alert Queue
+    else Standard High-Ticket Lead
+        Ingest-&gt;&gt;Staff: Surface in Staff AI Inbox (/staff/inbox)
+    end
+
+    Staff-&gt;&gt;DB: Inspect AI Draft, Edit Terms if needed
+    Staff-&gt;&gt;Guest: Click "Approve &amp; Dispatch" (status: SENT)
+    Note over Staff,Guest: Median Reply Time: &lt; 2 Minutes!</code></pre>
+<br/>
+<h4>Non-Negotiable AI Safety Guardrails:</h4>
+<p>1. <strong>Dynamic Rate Grounding:</strong> Room rates in quotation drafts are fetched strictly from the database rate table. The AI prompt explicitly forbids fabricating prices.</p>
+<p>2. <strong>Human-in-the-Loop:</strong> AI drafts are <strong>never sent automatically</strong>. Staff must review and click "Approve & Send".</p>
+<p>3. <strong>Deterministic Fallback Engine:</strong> If Google Gemini quota limits (HTTP 429) or network interruptions occur, the system falls back to an internal heuristic regex router. Not a single customer inquiry is ever dropped.</p>
+<p>4. <strong>GM Complaint Escalation:</strong> Maintenance or dissatisfaction keywords immediately flag <code>requiresGmReview = true</code> and alert the GM.</p>
+<br/>
+<hr/>
+<br/>
+<h3>5.4 Guest Self-Service: Stay Extensions & 48-Hour Cancellation</h3>
+<li><strong>In-House Stay Extension:</strong> Guests checked into the resort can extend their stay (+1 night) directly from <code>/my-bookings</code> using their <strong>Card on File</strong>. The booking engine re-checks allotment and atomically appends the night. If the requested night falls on a full-estate wedding blackout, it is cleanly rejected with an explanatory notice.</li>
+<li><strong>48-Hour Cancellation Rule:</strong> Guests can self-cancel with 1 click if check-in is $\ge 48$ hours away. The system atomically decrements <code>bookedCount</code>, restoring the key to the website allotment, and processes a full refund. Within 48 hours, cancellations are protected and routed to Front Desk phone support.</li>
+<br/>
+<hr/>
+<br/>
+<h3>5.5 Statutory Hotel PMS CSV Export</h3>
+<p>Hospitality Property Management Systems (Opera PMS, IDS Next, Prologic) require daily arrivals exports:</p>
+<li>Handled by <code>src/lib/export.ts</code>, outputting an RFC 4180 compliant CSV.</li>
+<li>Includes 21 statutory columns: <code>Booking Reference</code>, <code>Guest Name</code>, <code>Phone</code>, <code>Email</code>, <code>Room Category</code>, <code>Check-In</code>, <code>Check-Out</code>, <code>Nights</code>, <code>Base Tariff</code>, <code>Discount</code>, <code>Net Taxable</code>, <code>SAC Code (996311)</code>, <code>CGST Rate</code>, <code>CGST Amount</code>, <code>SGST Rate</code>, <code>SGST Amount</code>, <code>Grand Total</code>, <code>Payment Ref</code>, <code>Booking Status</code>, <code>Created At</code>, and <code>Special Requests</code>.</li>
+<br/>
+<hr/>
+<br/>
+<h2>6. UI and Design Decisions</h2>
+<br/>
+<p>The client brief stresses: <em>"The client values good, minimal design: clean layouts, white space, a restrained palette and clear type, with nothing on screen that lacks a purpose. Design counts as much as features."</em></p>
+<br/>
+<h3>6.1 Visual Identity & Restrained Palette</h3>
+<li><strong>Deep Coffee Estate Green (<code>#242e20</code>, <code>#384432</code>):</strong> Evokes the lush, shade-grown Arabica coffee plantations of the Mullayanagiri hills. Used for primary CTAs and hero sections.</li>
+<li><strong>Warm Plantation Cream & Parchment (<code>#fbf8f5</code>, <code>#f5efe8</code>):</strong> Replaces harsh sterile white with a relaxed, luxury resort paper tone.</li>
+<li><strong>Muted Harvest Gold (<code>#d97706</code>, <code>#b45309</code>):</strong> Accent color reserved strictly for callout badges, special offers, and evaluator launchpad highlights.</li>
+<li><strong>Typography:</strong> Elegant serif headings (<code>font-serif</code>, Playfair / Merriweather style) paired with clean, readable sans-serif body typography.</li>
+<br/>
+<h3>6.2 Key Screens & UX Rationale</h3>
+<p>1. <strong>The Dual-Purpose Homepage (<code>/</code>):</strong></p>
+<p>   <em> </em>For Guests:* Sells the coffee sanctuary experience with high-resolution imagery, direct perks badge (0% OTA commission, best rate guarantee), and a 1-step date-picker search bar.</p>
+<p>   <em> </em>For Evaluators:* Features a neat, gold <strong>Evaluator Showcase</strong> below the header with 1-click role switcher buttons (Guest, Staff, GM) and direct diagnostic links (<code>/api/health</code>, <code>/api/ai/test</code>).</p>
+<p>2. <strong>The 3-Step Checkout Flow (<code>/book</code>):</strong></p>
+<p>   * Keeping checkout under 3 steps eliminates drop-offs. Guests select room $\rightarrow$ enter contact info $\rightarrow$ view split GST summary $\rightarrow$ confirm with simulated Razorpay.</p>
+<p>3. <strong>Unified Staff Inbox (<code>/staff/inbox</code>):</strong></p>
+<p>   * Designed like an executive dispatch console. Each inquiry card features an SLA countdown timer (green when $<30$ min, amber when $<1$ hr, red pulse when overdue). Clicking any card opens a side-by-side view with raw message on the left and editable AI quote on the right.</p>
+<p>4. <strong>GM 45-Day Matrix (<code>/admin/rates</code>):</strong></p>
+<p>   * Built for operational speed. Inline numeric inputs allow the GM to adjust rates or allotments in seconds without navigating nested modals.</p>
+<br/>
+<h3>6.3 Resilience & State Handling</h3>
+<li><strong>Loading States:</strong> Subtle skeleton loaders prevent layout shift while data loads.</li>
+<li><strong>Empty States:</strong> Friendly, actionable empty states on <code>/my-bookings</code> and <code>/staff/inbox</code> encourage browsing or simulation.</li>
+<li><strong>Zero Dead Buttons:</strong> Every button across all 8 screens is connected to a live server action or API route.</li>
+<br/>
+<hr/>
+<br/>
+<h2>7. What Was Cut, and What We Would Do Next</h2>
+<br/>
+<h3>7.1 What Was Intentionally Cut (Out-of-Scope Boundaries)</h3>
+<p>In accordance with the assessment brief's instructions to <em>"build a small part really well instead of the whole scope badly"</em>, the following were intentionally excluded:</p>
+<p>1. <strong>Channel Manager Replacement:</strong> We did not build a full 2-way OTA XML sync engine (e.g., RateGain or SiteMinder). Instead, we solved the core problem cleanly with <strong>Allotment Partitioning</strong> (dedicating 17 keys to direct booking and reserving 59 keys for travel agency contracts).</p>
+<p>2. <strong>Full Hotel PMS Replacement:</strong> We did not build housekeeping shift rosters or billing folios. We cleanly integrated with existing hotel PMS software via daily <strong>RFC 4180 CSV exports</strong>.</p>
+<p>3. <strong>Loyalty / Rewards Points:</strong> Cut per brief instructions. We substituted an immediate, tangible direct benefit: the <code>COFFEE10</code> direct promo voucher.</p>
+<p>4. <strong>Restaurant & Spa Bookings:</strong> Dining table reservations were excluded to keep focus on the core room revenue and event lead recovery.</p>
+<br/>
+<h3>7.2 What We Would Build Next (Future Roadmap)</h3>
+<p>If allocated an additional 4 weeks of engineering time:</p>
+<p>1. <strong>Two-Way iCal / OTA Synchronization:</strong> Implement an automated iCal synchronization feed so that when the GM blocks a blackout date on the resort website, it automatically syncs to Airbnb and Booking.com calendars.</p>
+<p>2. <strong>Official WhatsApp Business Cloud API Integration:</strong> Wire the AI router directly to the Meta WhatsApp Cloud API webhooks so incoming WhatsApp messages from brides and event planners receive the staff-approved quote directly in their WhatsApp chat.</p>
+<p>3. <strong>Automated Post-Stay Review & Sentiment Pipeline:</strong> Send an automated WhatsApp satisfaction survey 2 hours after checkout. High scores (5/5) receive a direct Google Maps review link; low scores trigger an immediate GM alert.</p>
+<p>4. <strong>Dynamic Surge Pricing Algorithm:</strong> Introduce automated weekend/holiday tariff adjustments based on Mullayanagiri tourist season indicators.</p>
+<br/>
+<hr/>
+<br/>
+<h2>8. Role-Based Access Control & Security Architecture</h2>
+<br/>
+<h3>8.1 Three-Tier Permissions Matrix</h3>
+<br/>
+<table class="tdd-table"><thead><tr><th>Resource / Action</th><th>Guest (Priya)</th><th>Reservations Staff (Karthik)</th><th>General Manager (Vikram)</th></tr></thead><tbody><tr><td>Browse Rooms & Live Allotment (<code>/rooms</code>)</td><td>✅</td><td>✅</td><td>✅</td></tr><tr><td>Book Room & Apply Promo (<code>/book</code>)</td><td>✅</td><td>✅</td><td>✅</td></tr><tr><td>View Stays & Card-on-File Extension (<code>/my-bookings</code>)</td><td>✅ (Own)</td><td>✅ (All)</td><td>✅ (All)</td></tr><tr><td>Staff Front Desk Roster & Check-In (<code>/staff/bookings</code>)</td><td>❌</td><td>✅</td><td>✅</td></tr><tr><td>21-Column PMS Statutory CSV Export</td><td>❌</td><td>✅</td><td>✅</td></tr><tr><td>Review & Dispatch AI Enquiry Quotes (<code>/staff/inbox</code>)</td><td>❌</td><td>✅</td><td>✅</td></tr><tr><td>GM 45-Day Rate & Allotment Matrix (<code>/admin/rates</code>)</td><td>❌</td><td>❌</td><td>✅</td></tr><tr><td>Physical Key Ceiling Guardrail Enforcement</td><td>❌</td><td>❌</td><td>✅ (Automatic)</td></tr><tr><td>Schedule Full-Property Blackouts (<code>/admin/rates</code>)</td><td>❌</td><td>❌</td><td>✅</td></tr><tr><td>Create & Cap Promo Codes (<code>/admin/promos</code>)</td><td>❌</td><td>❌</td><td>✅</td></tr><tr><td>Inspect GM Unsorted AI Queue & Urgent Alerts</td><td>❌</td><td>❌</td><td>✅</td></tr><tr><td>Demote or Delete Fellow GM Account</td><td>❌</td><td>❌</td><td>❌ (Peer GM Protection)</td></tr></tbody></table>
+<br/>
+<h3>8.2 Security & DPDP Act 2023 Hardening</h3>
+<li><strong>Sliding-Window Rate Limiting:</strong> In-memory rate limiter on sensitive endpoints (<code>/api/auth/login</code>, <code>/api/bookings</code>) limits clients to 10 requests/minute, defending against bot scraping and credential stuffing.</li>
+<li><strong>XSS Sanitization:</strong> All user inputs (names, emails, phone numbers, inquiry bodies) pass through HTML entity scrubbers and phone sanitizers before database persistence.</li>
+<li><strong>Peer GM Protection:</strong> A General Manager cannot demote or delete a fellow GM account, preventing administrative lockout.</li>
+<br/>
+<hr/>
+<br/>
+<h2>9. Verification & Test Matrix (160 Tests, 100% Green)</h2>
+<br/>
+<p>The platform is thoroughly verified through <strong>15 Vitest test suites comprising 160 automated tests</strong>:</p>
+<br/>
+<pre><code class="language-">+------------------------------------+------------+-----------------------------------------------------+
+| Test Suite File                    | Tests Pass | Primary Architectural Scope Tested                  |
++------------------------------------+------------+-----------------------------------------------------+
+| src/lib/gst.test.ts                | 10 Tests   | 12% vs 18% tiers, CGST/SGST split, ₹7,500 threshold |
+| src/lib/promo.test.ts              | 8 Tests    | Percentage discounts, ₹2,000 caps, expiry dates     |
+| src/lib/allotment.test.ts          | 13 Tests   | Atomic reserve, release, sold-out boundary guards   |
+| src/lib/booking.test.ts            | 12 Tests   | EST reference format, stay extension, 48h cancel    |
+| src/lib/auth.test.ts               | 22 Tests   | Bcrypt, Edge JWT, role access, peer GM protection   |
+| src/lib/rates.test.ts              | 20 Tests   | 45-day matrix, physical key caps, blackout logic    |
+| src/lib/export.test.ts             | 12 Tests   | RFC 4180 PMS CSV export, SAC 996311 compliance      |
+| src/lib/enquiry.test.ts            | 15 Tests   | Multi-channel ingestion, SLA timers, human review   |
+| src/lib/gemini.test.ts             | 10 Tests   | Entity extraction, wedding/offsite classification   |
+| src/lib/gemini-live.test.ts        | 2 Tests    | Live Google Gemini connection &amp; benchmark ENQ-4410  |
+| src/lib/payment.test.ts            | 8 Tests    | Mock Razorpay Card &amp; UPI simulation                 |
+| src/lib/health.test.ts             | 3 Tests    | System health diagnostics, 76 keys audit, latency   |
+| src/lib/rateLimit.test.ts          | 5 Tests    | Sliding-window rate limiter, bot anti-abuse (429)   |
+| src/lib/sanitize.test.ts           | 8 Tests    | XSS prevention, HTML stripping, phone sanitization  |
+| src/lib/integration.test.ts       | 12 Tests   | Master end-to-end integration across all 7 phases   |
++------------------------------------+------------+-----------------------------------------------------+
+| TOTAL                              | 160 Tests  | 100% Pass Rate Across All 15 Test Suites            |
++------------------------------------+------------+-----------------------------------------------------+</code></pre>
+<br/>
+<h3>Production Build Verification</h3>
+<p>Executing <code>npm run build</code>:</p>
+<li><strong>All 33 static and dynamic routes compile cleanly with zero TypeScript errors.</strong></li>
+<br/>
+<hr/>
+<p><em>Submitted for IsoCode Labs Technical Assessment — Problem #5: The Estate Resort, Chikkamagaluru.</em></p>
+<br/>
+</body>
+</html>

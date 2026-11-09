@@ -33,3 +33,11 @@ yarn-error.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Internal Documentation & Scratch
+ABOUT_PROJECT.md
+about project.md
+about_project.md
+scratch/
+*.zip
+
