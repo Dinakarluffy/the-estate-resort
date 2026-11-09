@@ -10,7 +10,7 @@
 
 > **Assessment Submission:** IsoCode Labs Take-Home Assessment — Problem #5: Hill Resort Direct-Booking Website with AI Enquiry Routing  
 > **Client:** Company A — Luxury 76-Key Coffee-Estate Resort, Mullayanagiri Hills, Chikkamagaluru, Karnataka  
-> **Repository:** `https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort` *(Replace `<YOUR_GITHUB_USERNAME>` with your GitHub username)*  
+> **Repository:** `https://github.com/Dinakarluffy/the-estate-resort`  
 > **Live Local App:** `http://localhost:3000`  
 > **Submission Package:** `TDD.pdf` (or `TDD.md`) and `deployment.md`  
 
@@ -100,7 +100,7 @@ This project is built with **Next.js 14 App Router** and **Prisma ORM with SQLit
 
 ### Step 1: Clone or Open the Repository
 ```bash
-git clone https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort.git
+git clone https://github.com/Dinakarluffy/the-estate-resort.git
 cd the-estate-resort
 ```
 

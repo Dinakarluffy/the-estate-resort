@@ -5,7 +5,7 @@
 **Client:** Company A — Luxury Coffee-Estate Hill Resort, Mullayanagiri, Chikkamagaluru, Karnataka  
 **Scale:** 76 Keys total (64 Luxury Heritage Rooms + 12 Private Plunge Pool Villas)  
 **Direct Allotment:** 17 Keys online (protecting 59 keys for travel agency partners & offline corporate buyouts)  
-**GitHub Repository:** `https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort` *(Replace `<YOUR_GITHUB_USERNAME>` with your GitHub username)*  
+**GitHub Repository:** `https://github.com/Dinakarluffy/the-estate-resort`  
 **Live Local App:** `http://localhost:3000`  
 
 ---
@@ -33,7 +33,7 @@ Follow these simple steps to run the project locally on Windows, macOS, or Linux
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort.git
+git clone https://github.com/Dinakarluffy/the-estate-resort.git
 cd the-estate-resort
 ```
 

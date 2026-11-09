@@ -1,7 +1,7 @@
 # Technical Design Document (TDD)
 ## The Estate Resort — Direct-Booking Platform & AI Operations Router
 
-**GitHub Repository:** `https://github.com/<YOUR_GITHUB_USERNAME>/the-estate-resort` *(Replace `<YOUR_GITHUB_USERNAME>` with your GitHub username)*  
+**GitHub Repository:** `https://github.com/Dinakarluffy/the-estate-resort`  
 **Live Local Application:** `http://localhost:3000`  
 **Assessment:** IsoCode Labs Take-Home Assessment — Problem #5: Hill Resort Direct-Booking Website with AI Enquiry Routing  
 **Client:** Company A — Luxury 76-Key Coffee-Estate Resort, Mullayanagiri Hills, Chikkamagaluru, Karnataka  
